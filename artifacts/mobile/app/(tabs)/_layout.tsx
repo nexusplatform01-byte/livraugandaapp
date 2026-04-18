@@ -97,8 +97,10 @@ function ClassicTabLayout() {
         options={{
           title: "",
           tabBarIcon: () => (
-            <View style={sendBtnStyle}>
-              <Feather name="navigation" size={24} color="#1A3B2F" />
+            <View style={sendOuterStyle}>
+              <View style={sendBtnStyle}>
+                <Feather name="navigation" size={22} color="#1A3B2F" />
+              </View>
             </View>
           ),
         }}
@@ -131,21 +133,28 @@ function ClassicTabLayout() {
   );
 }
 
+const sendOuterStyle = {
+  width: 62,
+  height: 62,
+  borderRadius: 31,
+  backgroundColor: "#F5F7F5",
+  alignItems: "center" as const,
+  justifyContent: "center" as const,
+  marginBottom: 14,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.12,
+  shadowRadius: 4,
+  elevation: 6,
+};
+
 const sendBtnStyle = {
-  width: 54,
-  height: 54,
-  borderRadius: 27,
+  width: 48,
+  height: 48,
+  borderRadius: 24,
   backgroundColor: "#C6F135",
   alignItems: "center" as const,
   justifyContent: "center" as const,
-  marginBottom: 10,
-  borderWidth: 4,
-  borderColor: "#F5F7F5",
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.18,
-  shadowRadius: 6,
-  elevation: 8,
 };
 
 export default function TabLayout() {
