@@ -10,29 +10,21 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const TAB_BG = "#1A3B2F";
 const ACTIVE = "#C6F135";
 const INACTIVE = "rgba(255,255,255,0.55)";
-const NOTCH_GAP = 74;
+const NOTCH_GAP = 80;
+const NOTCH_RADIUS = 40;
+const NOTCH_HEIGHT = 44;
 
-function NotchedBackground({ height }: { height: number }) {
+function NotchedBackground() {
   return (
-    <View style={[StyleSheet.absoluteFill, { flexDirection: "row" }]}>
-      {/* Left panel */}
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: TAB_BG,
-          borderTopRightRadius: 28,
-        }}
-      />
-      {/* Transparent notch gap */}
-      <View style={{ width: NOTCH_GAP, backgroundColor: "transparent" }} />
-      {/* Right panel */}
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: TAB_BG,
-          borderTopLeftRadius: 28,
-        }}
-      />
+    <View style={StyleSheet.absoluteFill}>
+      {/* Top strip with arch cut out only at the top */}
+      <View style={{ height: NOTCH_HEIGHT, flexDirection: "row" }}>
+        <View style={{ flex: 1, backgroundColor: TAB_BG, borderTopRightRadius: NOTCH_RADIUS }} />
+        <View style={{ width: NOTCH_GAP }} />
+        <View style={{ flex: 1, backgroundColor: TAB_BG, borderTopLeftRadius: NOTCH_RADIUS }} />
+      </View>
+      {/* Bottom solid — no gap */}
+      <View style={{ flex: 1, backgroundColor: TAB_BG }} />
     </View>
   );
 }
@@ -89,7 +81,7 @@ function ClassicTabLayout() {
           fontFamily: "Inter_500Medium",
           marginTop: -4,
         },
-        tabBarBackground: () => <NotchedBackground height={tabHeight} />,
+        tabBarBackground: () => <NotchedBackground />,
       }}
     >
       <Tabs.Screen
@@ -158,19 +150,19 @@ function ClassicTabLayout() {
 }
 
 const sendOuterStyle = {
-  width: 66,
-  height: 66,
-  borderRadius: 33,
+  width: 76,
+  height: 76,
+  borderRadius: 38,
   backgroundColor: "#F5F7F5",
   alignItems: "center" as const,
   justifyContent: "center" as const,
-  marginBottom: 16,
+  marginBottom: 20,
 };
 
 const sendBtnStyle = {
-  width: 52,
-  height: 52,
-  borderRadius: 26,
+  width: 60,
+  height: 60,
+  borderRadius: 30,
   backgroundColor: "#C6F135",
   alignItems: "center" as const,
   justifyContent: "center" as const,
