@@ -4,35 +4,35 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Dimensions, Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Path, Svg } from "react-native-svg";
 
 const TAB_BG = "#1A3B2F";
 const ACTIVE = "#C6F135";
 const INACTIVE = "rgba(255,255,255,0.55)";
-const NOTCH_GAP = 78;
-const NOTCH_RADIUS = 38;
-const NOTCH_DEPTH = 32;
+// Notch arc radius — matches the outer ring (38px) + small breathing gap
+const NOTCH_R = 42;
 
-function NotchedBackground() {
+function NotchedBackground({ height }: { height: number }) {
+  const width = Dimensions.get("window").width;
+  const cx = width / 2;
+  // SVG path: full rect with a perfect circular arc cut into the top center
+  // Clockwise arc (sweep=1) from left notch edge to right notch edge → curves downward
+  const d = [
+    `M 0,0`,
+    `L ${cx - NOTCH_R},0`,
+    `A ${NOTCH_R},${NOTCH_R},0,0,1,${cx + NOTCH_R},0`,
+    `L ${width},0`,
+    `L ${width},${height}`,
+    `L 0,${height}`,
+    `Z`,
+  ].join(" ");
+
   return (
-    <View style={StyleSheet.absoluteFill}>
-      {/* Full-height left + right panels — they curve inward at the top only */}
-      <View style={{ flex: 1, flexDirection: "row" }}>
-        <View style={{ flex: 1, backgroundColor: TAB_BG, borderTopRightRadius: NOTCH_RADIUS }} />
-        <View style={{ width: NOTCH_GAP }} />
-        <View style={{ flex: 1, backgroundColor: TAB_BG, borderTopLeftRadius: NOTCH_RADIUS }} />
-      </View>
-      {/* Solid bridge fills below the arch depth — makes it one piece */}
-      <View style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        top: NOTCH_DEPTH,
-        backgroundColor: TAB_BG,
-      }} />
-    </View>
+    <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
+      <Path d={d} fill={TAB_BG} />
+    </Svg>
   );
 }
 
@@ -88,7 +88,7 @@ function ClassicTabLayout() {
           fontFamily: "Inter_500Medium",
           marginTop: -4,
         },
-        tabBarBackground: () => <NotchedBackground />,
+        tabBarBackground: () => <NotchedBackground height={tabHeight} />,
       }}
     >
       <Tabs.Screen
