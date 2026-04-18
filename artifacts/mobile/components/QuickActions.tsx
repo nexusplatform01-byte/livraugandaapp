@@ -2,21 +2,28 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { BankIcon, ExchangeIcon, PayIcon } from "./QuickActionIcons";
 
 interface Action {
   key: string;
   label: string;
-  icon: keyof typeof Feather.glyphMap;
-  color: string;
   bg: string;
 }
 
 const ACTIONS: Action[] = [
-  { key: "airtime", label: "Airtime", icon: "phone", color: "#FFFFFF", bg: "#1A3B2F" },
-  { key: "bank", label: "Bank", icon: "briefcase", color: "#FFFFFF", bg: "#C0392B" },
-  { key: "pay", label: "Pay", icon: "shopping-cart", color: "#FFFFFF", bg: "#1A6B4A" },
-  { key: "exchange", label: "Exchange", icon: "repeat", color: "#FFFFFF", bg: "#B8860B" },
+  { key: "airtime", label: "Airtime", bg: "#1A3B2F" },
+  { key: "bank", label: "Bank", bg: "#C0392B" },
+  { key: "pay", label: "Pay", bg: "#1A6B4A" },
+  { key: "exchange", label: "Exchange", bg: "#B8860B" },
 ];
+
+function ActionIcon({ actionKey }: { actionKey: string }) {
+  if (actionKey === "airtime") return <Feather name="phone" size={22} color="#FFFFFF" />;
+  if (actionKey === "bank") return <BankIcon color="#FFFFFF" />;
+  if (actionKey === "pay") return <PayIcon color="#FFFFFF" />;
+  if (actionKey === "exchange") return <ExchangeIcon color="#FFFFFF" />;
+  return null;
+}
 
 interface QuickActionsProps {
   onAction?: (key: string) => void;
@@ -36,7 +43,7 @@ export function QuickActions({ onAction }: QuickActionsProps) {
           }}
         >
           <View style={[styles.iconBox, { backgroundColor: a.bg }]}>
-            <Feather name={a.icon} size={22} color={a.color} />
+            <ActionIcon actionKey={a.key} />
           </View>
           <Text style={styles.label}>{a.label}</Text>
         </TouchableOpacity>
