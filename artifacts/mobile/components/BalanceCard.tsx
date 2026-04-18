@@ -32,7 +32,7 @@ export function BalanceCard({ balance, currency = "₦", onFund, onSend }: Balan
           {hidden ? `${currency}••••••••` : `${currency}${formatted}`}
         </Text>
         <TouchableOpacity onPress={toggle} style={styles.eyeBtn} activeOpacity={0.7}>
-          <Feather name={hidden ? "eye-off" : "eye"} size={20} color="#22A861" />
+          <Feather name={hidden ? "eye-off" : "eye"} size={20} color="#C6F135" />
         </TouchableOpacity>
       </View>
 
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   label: {
-    color: "#22A861",
+    color: "#C6F135",
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     marginBottom: 8,
@@ -81,13 +81,13 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   primaryBtn: {
-    backgroundColor: "#22A861",
+    backgroundColor: "#C6F135",
     borderRadius: 30,
     paddingVertical: 14,
     paddingHorizontal: 44,
   },
   primaryBtnText: {
-    color: "#FFFFFF",
+    color: "#1A3B2F",
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
   },
