@@ -1,0 +1,14 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "Ykxoapew6xfF-u7vUcQvB"
+uri = "file://artifacts/mobile/assets/images/icon.png"
+type = "image"
+title = "finwallet app icon"
+
+[[generated]]
+id = "1xmG6PMYYjOvRrw_gSQzL"
+uri = "file://artifacts/mobile/assets/images/avatar.png"
+type = "image"
+title = "user avatar"
