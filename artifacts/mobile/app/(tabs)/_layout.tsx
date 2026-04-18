@@ -138,11 +138,13 @@ const sendBtnStyle = {
   backgroundColor: "#C6F135",
   alignItems: "center" as const,
   justifyContent: "center" as const,
-  marginBottom: 8,
-  shadowColor: "#C6F135",
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.4,
-  shadowRadius: 8,
+  marginBottom: 10,
+  borderWidth: 4,
+  borderColor: "#F5F7F5",
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.18,
+  shadowRadius: 6,
   elevation: 8,
 };
 
