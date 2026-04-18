@@ -137,7 +137,7 @@ const sendOuterStyle = {
   width: 62,
   height: 62,
   borderRadius: 31,
-  backgroundColor: "#F5F7F5",
+  backgroundColor: "transparent",
   alignItems: "center" as const,
   justifyContent: "center" as const,
   marginBottom: 14,
