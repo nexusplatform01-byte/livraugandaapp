@@ -42,9 +42,9 @@ function ClassicTabLayout() {
   const isWeb = Platform.OS === "web";
   const insets = useSafeAreaInsets();
 
-  const TAB_BG = "#1A3B2F";
-  const ACTIVE = "#C6F135";
-  const INACTIVE = "rgba(255,255,255,0.5)";
+  const TAB_BG = "#FFFFFF";
+  const ACTIVE = "#1A3B2F";
+  const INACTIVE = "#B0BDB0";
 
   return (
     <Tabs
@@ -55,7 +55,8 @@ function ClassicTabLayout() {
         tabBarStyle: {
           position: "absolute",
           backgroundColor: TAB_BG,
-          borderTopWidth: 0,
+          borderTopWidth: 1,
+          borderTopColor: "#E8EDE8",
           elevation: 0,
           height: isWeb ? 84 : 65 + insets.bottom,
           paddingBottom: isWeb ? 0 : insets.bottom,
