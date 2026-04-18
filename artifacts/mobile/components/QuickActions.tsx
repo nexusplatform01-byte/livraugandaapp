@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { BankIcon, ExchangeIcon, PayIcon } from "./QuickActionIcons";
 
 interface Action {
@@ -42,9 +43,16 @@ export function QuickActions({ onAction }: QuickActionsProps) {
             onAction?.(a.key);
           }}
         >
-          <View style={[styles.iconBox, { backgroundColor: a.bg }]}>
-            <ActionIcon actionKey={a.key} />
-          </View>
+          <LinearGradient
+            colors={["#C6F135", "#22A861", "#1A3B2F"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientRing}
+          >
+            <View style={[styles.iconBox, { backgroundColor: a.bg }]}>
+              <ActionIcon actionKey={a.key} />
+            </View>
+          </LinearGradient>
           <Text style={styles.label}>{a.label}</Text>
         </TouchableOpacity>
       ))}
@@ -63,6 +71,14 @@ const styles = StyleSheet.create({
   item: {
     alignItems: "center",
     gap: 8,
+  },
+  gradientRing: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 3,
   },
   iconBox: {
     width: 58,
