@@ -12,10 +12,10 @@ interface Action {
 }
 
 const ACTIONS: Action[] = [
-  { key: "receive", label: "Receive", icon: "download", color: "#FFFFFF", bg: "#1A3B2F" },
-  { key: "request", label: "Request", icon: "file-text", color: "#FFFFFF", bg: "#C0392B" },
-  { key: "exchange", label: "Exchange", icon: "repeat", color: "#FFFFFF", bg: "#1A6B4A" },
-  { key: "withdraw", label: "Withdraw", icon: "monitor", color: "#FFFFFF", bg: "#B8860B" },
+  { key: "airtime", label: "Airtime", icon: "phone", color: "#FFFFFF", bg: "#1A3B2F" },
+  { key: "bank", label: "Bank", icon: "briefcase", color: "#FFFFFF", bg: "#C0392B" },
+  { key: "pay", label: "Pay", icon: "shopping-cart", color: "#FFFFFF", bg: "#1A6B4A" },
+  { key: "exchange", label: "Exchange", icon: "repeat", color: "#FFFFFF", bg: "#B8860B" },
 ];
 
 interface QuickActionsProps {
