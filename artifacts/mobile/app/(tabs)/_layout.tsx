@@ -1,12 +1,41 @@
-import { BlurView } from "expo-blur";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const TAB_BG = "#1A3B2F";
+const ACTIVE = "#C6F135";
+const INACTIVE = "rgba(255,255,255,0.55)";
+const NOTCH_GAP = 74;
+
+function NotchedBackground({ height }: { height: number }) {
+  return (
+    <View style={[StyleSheet.absoluteFill, { flexDirection: "row" }]}>
+      {/* Left panel */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: TAB_BG,
+          borderTopRightRadius: 28,
+        }}
+      />
+      {/* Transparent notch gap */}
+      <View style={{ width: NOTCH_GAP, backgroundColor: "transparent" }} />
+      {/* Right panel */}
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: TAB_BG,
+          borderTopLeftRadius: 28,
+        }}
+      />
+    </View>
+  );
+}
 
 function NativeTabLayout() {
   return (
@@ -36,15 +65,10 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const insets = useSafeAreaInsets();
-
-  const TAB_BG = "#1A3B2F";
-  const ACTIVE = "#22A861";
-  const INACTIVE = "rgba(255,255,255,0.5)";
+  const tabHeight = isWeb ? 84 : 65 + insets.bottom;
 
   return (
     <Tabs
@@ -54,10 +78,10 @@ function ClassicTabLayout() {
         tabBarInactiveTintColor: INACTIVE,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: TAB_BG,
+          backgroundColor: "transparent",
           borderTopWidth: 0,
           elevation: 0,
-          height: isWeb ? 84 : 65 + insets.bottom,
+          height: tabHeight,
           paddingBottom: isWeb ? 0 : insets.bottom,
         },
         tabBarLabelStyle: {
@@ -65,7 +89,7 @@ function ClassicTabLayout() {
           fontFamily: "Inter_500Medium",
           marginTop: -4,
         },
-        tabBarBackground: () => null,
+        tabBarBackground: () => <NotchedBackground height={tabHeight} />,
       }}
     >
       <Tabs.Screen
@@ -99,7 +123,7 @@ function ClassicTabLayout() {
           tabBarIcon: () => (
             <View style={sendOuterStyle}>
               <View style={sendBtnStyle}>
-                <Feather name="navigation" size={22} color="#FFFFFF" />
+                <Feather name="navigation" size={22} color="#1A3B2F" />
               </View>
             </View>
           ),
@@ -134,32 +158,27 @@ function ClassicTabLayout() {
 }
 
 const sendOuterStyle = {
-  width: 62,
-  height: 62,
-  borderRadius: 31,
-  backgroundColor: "#FFFFFF",
+  width: 66,
+  height: 66,
+  borderRadius: 33,
+  backgroundColor: "#F5F7F5",
   alignItems: "center" as const,
   justifyContent: "center" as const,
-  marginBottom: 14,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.12,
-  shadowRadius: 4,
-  elevation: 6,
+  marginBottom: 16,
 };
 
 const sendBtnStyle = {
-  width: 48,
-  height: 48,
-  borderRadius: 24,
-  backgroundColor: "#22A861",
+  width: 52,
+  height: 52,
+  borderRadius: 26,
+  backgroundColor: "#C6F135",
   alignItems: "center" as const,
   justifyContent: "center" as const,
-  shadowColor: "#22A861",
+  shadowColor: "#000",
   shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: 0.4,
-  shadowRadius: 6,
-  elevation: 6,
+  shadowOpacity: 0.2,
+  shadowRadius: 5,
+  elevation: 5,
 };
 
 export default function TabLayout() {
