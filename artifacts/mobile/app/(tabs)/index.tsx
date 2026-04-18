@@ -42,13 +42,13 @@ export default function HomeScreen() {
           onAdd={() => Alert.alert("Add Wallet", "Add new wallet feature coming soon")}
         />
       </View>
+      <QuickActions onAction={(k) => Alert.alert(k, `${k} feature coming soon`)} />
+      <View style={styles.divider} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 90 }]}
         showsVerticalScrollIndicator={false}
       >
-        <QuickActions onAction={(k) => Alert.alert(k, `${k} feature coming soon`)} />
-        <View style={styles.divider} />
         <TransactionList onSeeAll={() => Alert.alert("Transactions", "See all transactions")} />
       </ScrollView>
     </View>
