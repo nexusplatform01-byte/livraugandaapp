@@ -10,21 +10,28 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const TAB_BG = "#1A3B2F";
 const ACTIVE = "#C6F135";
 const INACTIVE = "rgba(255,255,255,0.55)";
-const NOTCH_GAP = 80;
-const NOTCH_RADIUS = 40;
-const NOTCH_HEIGHT = 44;
+const NOTCH_GAP = 78;
+const NOTCH_RADIUS = 38;
+const NOTCH_DEPTH = 32;
 
 function NotchedBackground() {
   return (
     <View style={StyleSheet.absoluteFill}>
-      {/* Top strip with arch cut out only at the top */}
-      <View style={{ height: NOTCH_HEIGHT, flexDirection: "row" }}>
+      {/* Full-height left + right panels — they curve inward at the top only */}
+      <View style={{ flex: 1, flexDirection: "row" }}>
         <View style={{ flex: 1, backgroundColor: TAB_BG, borderTopRightRadius: NOTCH_RADIUS }} />
         <View style={{ width: NOTCH_GAP }} />
         <View style={{ flex: 1, backgroundColor: TAB_BG, borderTopLeftRadius: NOTCH_RADIUS }} />
       </View>
-      {/* Bottom solid — no gap */}
-      <View style={{ flex: 1, backgroundColor: TAB_BG }} />
+      {/* Solid bridge fills below the arch depth — makes it one piece */}
+      <View style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        top: NOTCH_DEPTH,
+        backgroundColor: TAB_BG,
+      }} />
     </View>
   );
 }
