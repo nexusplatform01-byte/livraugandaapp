@@ -61,7 +61,7 @@ const TRANSACTIONS: Transaction[] = [
     date: "April 1, 2026",
     iconLetter: "A",
     iconBg: "#1A3B2F",
-    iconColor: "#C6F135",
+    iconColor: "#22A861",
     isDebit: false,
   },
   {

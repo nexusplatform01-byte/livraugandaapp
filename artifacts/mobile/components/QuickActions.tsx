@@ -12,10 +12,10 @@ interface Action {
 }
 
 const ACTIONS: Action[] = [
-  { key: "receive", label: "Receive", icon: "download", color: "#1A3B2F", bg: "#E8F5E0" },
-  { key: "request", label: "Request", icon: "file-text", color: "#C0392B", bg: "#FDECEA" },
-  { key: "exchange", label: "Exchange", icon: "repeat", color: "#1A6B4A", bg: "#E0F4EC" },
-  { key: "withdraw", label: "Withdraw", icon: "monitor", color: "#B8860B", bg: "#FEF9E3" },
+  { key: "receive", label: "Receive", icon: "download", color: "#FFFFFF", bg: "#1A3B2F" },
+  { key: "request", label: "Request", icon: "file-text", color: "#FFFFFF", bg: "#C0392B" },
+  { key: "exchange", label: "Exchange", icon: "repeat", color: "#FFFFFF", bg: "#1A6B4A" },
+  { key: "withdraw", label: "Withdraw", icon: "monitor", color: "#FFFFFF", bg: "#B8860B" },
 ];
 
 interface QuickActionsProps {
@@ -63,8 +63,6 @@ const styles = StyleSheet.create({
     borderRadius: 29,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
   },
   label: {
     color: "#1A3B2F",

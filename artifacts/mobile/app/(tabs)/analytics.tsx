@@ -73,7 +73,7 @@ export default function AnalyticsScreen() {
         <View style={styles.chart}>
           {MONTHS.map((m, i) => (
             <View key={m} style={styles.barGroup}>
-              <Bar value={DATA_IN[i]} color="#C6F135" maxVal={MAX_VAL} />
+              <Bar value={DATA_IN[i]} color="#22A861" maxVal={MAX_VAL} />
               <Bar value={DATA_OUT[i]} color="#1A3B2F" maxVal={MAX_VAL} />
               <Text style={styles.monthLabel}>{m}</Text>
             </View>
@@ -82,7 +82,7 @@ export default function AnalyticsScreen() {
 
         <View style={styles.legend}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#C6F135" }]} />
+            <View style={[styles.legendDot, { backgroundColor: "#22A861" }]} />
             <Text style={styles.legendText}>Income</Text>
           </View>
           <View style={styles.legendItem}>
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   summaryCardLabel: {
-    color: "#C6F135",
+    color: "#22A861",
     fontSize: 12,
     fontFamily: "Inter_500Medium",
     marginBottom: 6,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
   },
   periodTextActive: {
-    color: "#C6F135",
+    color: "#22A861",
   },
   chart: {
     flexDirection: "row",

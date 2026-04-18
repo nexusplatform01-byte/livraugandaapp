@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   cardBankName: {
-    color: "#C6F135",
+    color: "#22A861",
     fontSize: 18,
     fontFamily: "Inter_700Bold",
   },
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#C6F135",
+    backgroundColor: "#22A861",
     borderRadius: 4,
   },
   spendingRow: {

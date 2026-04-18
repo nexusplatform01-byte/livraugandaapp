@@ -31,7 +31,7 @@ export function HomeHeader({ name, avatarSource, onBellPress }: HomeHeaderProps)
         </View>
       </View>
       <TouchableOpacity style={styles.bellButton} onPress={onBellPress} activeOpacity={0.8}>
-        <Feather name="bell" size={20} color="#C6F135" />
+        <Feather name="bell" size={20} color="#22A861" />
       </TouchableOpacity>
     </View>
   );

@@ -43,7 +43,7 @@ function ClassicTabLayout() {
   const insets = useSafeAreaInsets();
 
   const TAB_BG = "#1A3B2F";
-  const ACTIVE = "#C6F135";
+  const ACTIVE = "#22A861";
   const INACTIVE = "rgba(255,255,255,0.5)";
 
   return (
@@ -99,7 +99,7 @@ function ClassicTabLayout() {
           tabBarIcon: () => (
             <View style={sendOuterStyle}>
               <View style={sendBtnStyle}>
-                <Feather name="navigation" size={22} color="#1A3B2F" />
+                <Feather name="navigation" size={22} color="#FFFFFF" />
               </View>
             </View>
           ),
@@ -152,9 +152,14 @@ const sendBtnStyle = {
   width: 48,
   height: 48,
   borderRadius: 24,
-  backgroundColor: "#C6F135",
+  backgroundColor: "#22A861",
   alignItems: "center" as const,
   justifyContent: "center" as const,
+  shadowColor: "#22A861",
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.4,
+  shadowRadius: 6,
+  elevation: 6,
 };
 
 export default function TabLayout() {

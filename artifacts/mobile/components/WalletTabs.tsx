@@ -75,8 +75,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   tabActive: {
-    backgroundColor: "#C6F135",
-    borderColor: "#C6F135",
+    backgroundColor: "#22A861",
+    borderColor: "#22A861",
   },
   tabText: {
     color: "#4A6A4A",

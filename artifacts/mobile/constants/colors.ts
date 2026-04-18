@@ -9,8 +9,8 @@ const colors = {
     card: "#ffffff",
     cardForeground: "#0a0a0a",
 
-    primary: "#C6F135",
-    primaryForeground: "#1A3B2F",
+    primary: "#22A861",
+    primaryForeground: "#FFFFFF",
 
     secondary: "#F0F4F0",
     secondaryForeground: "#1A3B2F",
@@ -18,8 +18,8 @@ const colors = {
     muted: "#F0F4F0",
     mutedForeground: "#6B7B6B",
 
-    accent: "#C6F135",
-    accentForeground: "#1A3B2F",
+    accent: "#22A861",
+    accentForeground: "#FFFFFF",
 
     destructive: "#ef4444",
     destructiveForeground: "#ffffff",
@@ -30,7 +30,7 @@ const colors = {
     // Custom brand colors
     headerBg: "#1A3B2F",
     headerBgLight: "#204837",
-    accentGreen: "#C6F135",
+    accentGreen: "#22A861",
     accentGreenDark: "#A8D020",
     iconReceive: "#1A3B2F",
     iconRequest: "#C0392B",
