@@ -14,6 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
 import { CopyLinkIcon, GmailIcon, MessengerIcon, MoreIcon, WhatsAppIcon } from "@/components/ShareIcons";
+import { AppTabBar } from "@/components/AppTabBar";
 
 const DARK_GREEN = "#1A3B2F";
 const LIME = "#C6F135";
@@ -72,7 +73,7 @@ export default function ReceiveScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 16 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Wallet Address Card */}
@@ -150,12 +151,15 @@ export default function ReceiveScreen() {
         </View>
       </ScrollView>
 
-      {/* Bottom Button */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+      {/* Share Wallet Info button */}
+      <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.shareWalletBtn} onPress={handleShare} activeOpacity={0.85}>
           <Text style={styles.shareWalletText}>Share Wallet Info</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Bottom navigation bar */}
+      <AppTabBar />
     </View>
   );
 }
@@ -309,12 +313,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
     backgroundColor: BG,
   },
   shareWalletBtn: {

@@ -15,6 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { BankIcon } from "@/components/QuickActionIcons";
+import { AppTabBar } from "@/components/AppTabBar";
 
 const DARK_GREEN = "#1A3B2F";
 const LIME = "#C6F135";
@@ -110,16 +111,12 @@ export default function SendMoneyScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.root}>
 
-        {/* Compact dark green header — paddingTop eats the status bar so green goes edge-to-edge */}
+        {/* Compact dark green header — no back button, balance centered */}
         <View style={[styles.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Feather name="chevron-left" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
           <View style={styles.topBarCenter}>
             <Text style={styles.topBarLabel}>Your Wallet Balance</Text>
             <Text style={styles.topBarBalance}>₦209,891.21</Text>
           </View>
-          <View style={{ width: 36 }} />
         </View>
 
         {/* 2×2 compact grid */}
@@ -157,8 +154,8 @@ export default function SendMoneyScreen() {
           <FormFields type={selected} />
         </ScrollView>
 
-        {/* Confirm button */}
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+        {/* Confirm button — narrowed, centered */}
+        <View style={styles.bottomBar}>
           <TouchableOpacity
             style={[styles.confirmBtn, !selected && styles.confirmBtnOff]}
             activeOpacity={selected ? 0.85 : 1}
@@ -169,6 +166,9 @@ export default function SendMoneyScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Bottom navigation bar */}
+        <AppTabBar />
       </View>
     </KeyboardAvoidingView>
   );
@@ -236,11 +236,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
   },
   bottomBar: {
-    paddingHorizontal: 16, paddingTop: 10, backgroundColor: BG,
+    paddingHorizontal: 40, paddingTop: 10, paddingBottom: 10, backgroundColor: BG,
+    alignItems: "center",
   },
   confirmBtn: {
     backgroundColor: DARK_GREEN, borderRadius: 14,
-    paddingVertical: 13, alignItems: "center",
+    paddingVertical: 13, paddingHorizontal: 36,
+    alignItems: "center", minWidth: 180,
   },
   confirmBtnOff: { backgroundColor: "#C8D8C8" },
   confirmText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: LIME },
