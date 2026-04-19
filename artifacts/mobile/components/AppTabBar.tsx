@@ -21,7 +21,7 @@ function TabBtn({
   const color = active ? LIME : INACTIVE;
   return (
     <TouchableOpacity style={styles.tabBtn} onPress={onPress} activeOpacity={0.7}>
-      <Feather name={icon} size={21} color={color} />
+      <Feather name={icon} size={22} color={color} />
       <Text style={[styles.tabLabel, { color }]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -29,9 +29,10 @@ function TabBtn({
 
 export function AppTabBar({ activeTab = "" }: { activeTab?: string }) {
   const insets = useSafeAreaInsets();
+  const isWeb = Platform.OS === "web";
   const width = Dimensions.get("window").width;
-  const tabH = 65;
-  const totalH = tabH + (Platform.OS === "web" ? 0 : insets.bottom);
+  const tabH = isWeb ? 84 : 65;
+  const totalH = tabH + (isWeb ? 0 : insets.bottom);
   const cx = width / 2;
 
   const d = [
@@ -50,11 +51,10 @@ export function AppTabBar({ activeTab = "" }: { activeTab?: string }) {
         <Path d={d} fill={TAB_BG} />
       </Svg>
 
-      <View style={[styles.row, { overflow: "visible" }]}>
+      <View style={[styles.row, { overflow: "visible", paddingBottom: isWeb ? 0 : insets.bottom }]}>
         <TabBtn icon="home"        label="Home"      active={activeTab === "home"}      onPress={() => router.replace("/")}          />
         <TabBtn icon="credit-card" label="Wallet"    active={activeTab === "wallet"}    onPress={() => router.replace("/wallet")}    />
 
-        {/* Center notch gap with floating Send button */}
         <View style={[styles.centerGap, { overflow: "visible" }]}>
           <TouchableOpacity
             style={styles.sendOuter}
@@ -68,7 +68,7 @@ export function AppTabBar({ activeTab = "" }: { activeTab?: string }) {
         </View>
 
         <TabBtn icon="bar-chart-2" label="Analytics" active={activeTab === "analytics"} onPress={() => router.replace("/analytics")} />
-        <TabBtn icon="layers"      label="Card"      active={activeTab === "card"}      onPress={() => router.replace("/card")}      />
+        <TabBtn icon="credit-card" label="Card"      active={activeTab === "card"}      onPress={() => router.replace("/card")}      />
       </View>
     </View>
   );
@@ -88,8 +88,9 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: "Inter_500Medium",
+    marginTop: -4,
   },
   centerGap: {
     width: NOTCH_R * 2 + 8,
