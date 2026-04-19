@@ -44,8 +44,8 @@ function NativeTabLayout() {
         <Label>Home</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="wallet">
-        <Icon sf={{ default: "wallet.pass", selected: "wallet.pass.fill" }} />
-        <Label>Wallet</Label>
+        <Icon sf={{ default: "banknote", selected: "banknote.fill" }} />
+        <Label>Loan</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="send">
         <Icon sf={{ default: "paperplane", selected: "paperplane.fill" }} />
@@ -109,12 +109,12 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="wallet"
         options={{
-          title: "Wallet",
+          title: "Loan",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="wallet.pass" tintColor={color} size={22} />
+              <SymbolView name="banknote" tintColor={color} size={22} />
             ) : (
-              <Feather name="credit-card" size={22} color={color} />
+              <Feather name="dollar-sign" size={22} color={color} />
             ),
         }}
       />
