@@ -108,10 +108,10 @@ export default function SendMoneyScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <View style={[styles.root, { paddingTop: Platform.OS === "web" ? 20 : insets.top }]}>
+      <View style={styles.root}>
 
-        {/* Compact dark green header */}
-        <View style={styles.topBar}>
+        {/* Compact dark green header — paddingTop eats the status bar so green goes edge-to-edge */}
+        <View style={[styles.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Feather name="chevron-left" size={20} color="#FFFFFF" />
           </TouchableOpacity>
@@ -165,7 +165,7 @@ export default function SendMoneyScreen() {
             onPress={() => selected && Alert.alert("Confirm", `Confirm ${label} transfer?`)}
           >
             <Text style={[styles.confirmText, !selected && styles.confirmTextOff]}>
-              {selected ? `Confirm ${label}` : "Select a method to continue"}
+              Confirm Payment
             </Text>
           </TouchableOpacity>
         </View>
@@ -240,10 +240,10 @@ const styles = StyleSheet.create({
   },
   confirmBtn: {
     backgroundColor: DARK_GREEN, borderRadius: 14,
-    paddingVertical: 16, alignItems: "center",
+    paddingVertical: 13, alignItems: "center",
   },
   confirmBtnOff: { backgroundColor: "#C8D8C8" },
-  confirmText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: LIME },
+  confirmText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: LIME },
   confirmTextOff: { color: "#8AA88A" },
 });
 
