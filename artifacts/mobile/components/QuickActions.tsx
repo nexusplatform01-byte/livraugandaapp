@@ -9,13 +9,26 @@ interface Action {
   key: string;
   label: string;
   bg: string;
+  gradient: readonly [string, string, ...string[]];
 }
 
 const ACTIONS: Action[] = [
-  { key: "airtime", label: "Airtime", bg: "#1A3B2F" },
-  { key: "bank", label: "Bank", bg: "#C0392B" },
-  { key: "pay", label: "Pay", bg: "#1A6B4A" },
-  { key: "exchange", label: "Exchange", bg: "#B8860B" },
+  {
+    key: "airtime", label: "Airtime", bg: "#1A3B2F",
+    gradient: ["#007AFF", "#5AC8FA", "#34AADC"],
+  },
+  {
+    key: "bank", label: "Bank", bg: "#C0392B",
+    gradient: ["#BF5AF2", "#FF2D55", "#FF6B9D"],
+  },
+  {
+    key: "pay", label: "Pay", bg: "#1A6B4A",
+    gradient: ["#FF9F0A", "#FF6B00", "#FF375F"],
+  },
+  {
+    key: "exchange", label: "Exchange", bg: "#B8860B",
+    gradient: ["#30D158", "#00C7BE", "#34C759"],
+  },
 ];
 
 function ActionIcon({ actionKey }: { actionKey: string }) {
@@ -44,7 +57,7 @@ export function QuickActions({ onAction }: QuickActionsProps) {
           }}
         >
           <LinearGradient
-            colors={["#C6F135", "#22A861", "#1A3B2F"]}
+            colors={a.gradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.gradientRing}
@@ -73,12 +86,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   gradientRing: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     alignItems: "center",
     justifyContent: "center",
-    padding: 3,
+    padding: 4,
   },
   iconBox: {
     width: 58,
