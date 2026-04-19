@@ -251,10 +251,10 @@ const fs = StyleSheet.create({
     textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6,
   },
   input: {
-    backgroundColor: "#F2F4F2", borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 12,
+    backgroundColor: "#FFFFFF", borderRadius: 16,
+    paddingHorizontal: 16, paddingVertical: 14,
     fontFamily: "Inter_400Regular", fontSize: 14, color: "#1A1A1A",
-    borderWidth: 1, borderColor: "#E0E8E0",
+    borderWidth: 1.5, borderColor: "#C6F135",
   },
   chip: {
     paddingHorizontal: 14, paddingVertical: 7,
