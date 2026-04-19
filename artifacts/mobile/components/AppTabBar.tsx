@@ -57,11 +57,13 @@ export function AppTabBar({ activeTab = "" }: { activeTab?: string }) {
         {/* Center notch gap with floating Send button */}
         <View style={[styles.centerGap, { overflow: "visible" }]}>
           <TouchableOpacity
-            style={styles.sendBtn}
+            style={styles.sendOuter}
             onPress={() => router.push("/send-money")}
             activeOpacity={0.85}
           >
-            <Feather name="send" size={21} color={TAB_BG} />
+            <View style={styles.sendBtn}>
+              <Feather name="navigation" size={22} color={TAB_BG} />
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -94,14 +96,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-start",
   },
-  sendBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: LIME,
+  sendOuter: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#F5F7F5",
     alignItems: "center",
     justifyContent: "center",
     position: "absolute",
-    top: -22,
+    top: -38,
+  },
+  sendBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: LIME,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
   },
 });
