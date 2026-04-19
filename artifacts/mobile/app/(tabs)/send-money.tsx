@@ -143,29 +143,26 @@ export default function SendMoneyScreen() {
           })}
         </View>
 
-        {/* Dynamic form — scrollable only if needed */}
+        {/* Dynamic form + confirm button — scrollable */}
         <ScrollView
           style={styles.formScroll}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           <FormFields type={selected} />
+          <View style={styles.bottomBar}>
+            <TouchableOpacity
+              style={[styles.confirmBtn, !selected && styles.confirmBtnOff]}
+              activeOpacity={selected ? 0.85 : 1}
+              onPress={() => selected && Alert.alert("Confirm", `Confirm ${label} transfer?`)}
+            >
+              <Text style={[styles.confirmText, !selected && styles.confirmTextOff]}>
+                Confirm Payment
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
-
-        {/* Confirm button — sits above nav bar */}
-        <View style={styles.bottomBar}>
-          <TouchableOpacity
-            style={[styles.confirmBtn, !selected && styles.confirmBtnOff]}
-            activeOpacity={selected ? 0.85 : 1}
-            onPress={() => selected && Alert.alert("Confirm", `Confirm ${label} transfer?`)}
-          >
-            <Text style={[styles.confirmText, !selected && styles.confirmTextOff]}>
-              Confirm Payment
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.navSpacer} />
 
       </View>
     </KeyboardAvoidingView>
@@ -234,16 +231,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
   },
   bottomBar: {
-    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, backgroundColor: BG,
-  },
-  navSpacer: {
-    height: 84,
-    backgroundColor: BG,
+    paddingHorizontal: 40, paddingTop: 10, paddingBottom: 12, backgroundColor: BG,
+    alignItems: "center",
   },
   confirmBtn: {
     backgroundColor: DARK_GREEN, borderRadius: 14,
-    paddingVertical: 17,
-    alignItems: "center",
+    paddingVertical: 13, paddingHorizontal: 36,
+    alignItems: "center", minWidth: 180,
   },
   confirmBtnOff: { backgroundColor: "#C8D8C8" },
   confirmText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: LIME },
