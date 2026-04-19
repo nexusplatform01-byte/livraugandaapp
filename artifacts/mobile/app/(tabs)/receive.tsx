@@ -213,13 +213,12 @@ function LiveraUserTab() {
 // ─── Main Screen ───────────────────────────────────────────────────────────────
 export default function ReceiveScreen() {
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === "web" ? 20 : insets.top;
   const [tab, setTab] = useState<"mobile" | "livra">("mobile");
 
   return (
-    <View style={[s.root, { paddingTop: topPad }]}>
-      {/* Balance header — same style as send page */}
-      <View style={s.topBar}>
+    <View style={s.root}>
+      {/* Exact same balance header as send page */}
+      <View style={[s.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
         <View style={s.topBarCenter}>
           <Text style={s.topBarLabel}>Your Wallet Balance</Text>
           <Text style={s.topBarBalance}>₦209,891.21</Text>
@@ -252,10 +251,10 @@ export default function ReceiveScreen() {
 
 const s = StyleSheet.create({
   root:         { flex: 1, backgroundColor: BG },
-  topBar:       { backgroundColor: DEEP, paddingTop: 10, paddingBottom: 22, paddingHorizontal: 20, alignItems: "center" },
-  topBarCenter: { alignItems: "center" },
-  topBarLabel:  { color: "rgba(255,255,255,0.65)", fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 4 },
-  topBarBalance:{ color: "#FFFFFF", fontSize: 30, fontFamily: "Inter_700Bold" },
+  topBar:       { backgroundColor: DEEP, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, marginBottom: 12, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  topBarCenter: { flex: 1, alignItems: "center" },
+  topBarLabel:  { fontFamily: "Inter_500Medium", fontSize: 11, color: LIME, marginBottom: 3 },
+  topBarBalance:{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF", letterSpacing: -0.5 },
 
   tabBar:          { flexDirection: "row", marginHorizontal: 18, marginBottom: 16, backgroundColor: CARD, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: BORDER },
   tabBtn:          { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 11, borderRadius: 11 },
