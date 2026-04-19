@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
+import { CopyLinkIcon, GmailIcon, MessengerIcon, MoreIcon, WhatsAppIcon } from "@/components/ShareIcons";
 
 const DARK_GREEN = "#1A3B2F";
 const LIME = "#C6F135";
@@ -22,12 +23,20 @@ const WALLET_ADDRESS = "PC-NG-005291";
 const CURRENCIES = ["NGN", "USD", "EUR"];
 
 const SHARE_OPTIONS = [
-  { key: "copy", label: "Copy link", icon: "copy" as const, bg: "#2C2C2C" },
-  { key: "whatsapp", label: "WhatsApp", icon: "message-circle" as const, bg: "#25D366" },
-  { key: "gmail", label: "Gmail", icon: "mail" as const, bg: "#EA4335" },
-  { key: "messenger", label: "Messenger", icon: "message-square" as const, bg: "#0084FF" },
-  { key: "more", label: "More", icon: "more-horizontal" as const, bg: "#8E8E93" },
+  { key: "copy",      label: "Copy link",  bg: "#2C2C2C" },
+  { key: "whatsapp",  label: "WhatsApp",   bg: "#25D366" },
+  { key: "gmail",     label: "Gmail",      bg: "#EA4335" },
+  { key: "messenger", label: "Messenger",  bg: "#0084FF" },
+  { key: "more",      label: "More",       bg: "#8E8E93" },
 ];
+
+function ShareIcon({ id }: { id: string }) {
+  if (id === "copy")      return <CopyLinkIcon />;
+  if (id === "whatsapp")  return <WhatsAppIcon />;
+  if (id === "gmail")     return <GmailIcon />;
+  if (id === "messenger") return <MessengerIcon />;
+  return <MoreIcon />;
+}
 
 export default function ReceiveScreen() {
   const insets = useSafeAreaInsets();
@@ -132,7 +141,7 @@ export default function ReceiveScreen() {
                 }
               >
                 <View style={[styles.shareIcon, { backgroundColor: opt.bg }]}>
-                  <Feather name={opt.icon} size={18} color="#FFFFFF" />
+                  <ShareIcon id={opt.key} />
                 </View>
                 <Text style={styles.shareLabel}>{opt.label}</Text>
               </TouchableOpacity>
