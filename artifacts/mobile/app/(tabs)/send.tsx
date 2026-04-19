@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 
 const RECENT_CONTACTS = [
   { id: "1", name: "Chidi Okeke", initial: "C", color: "#1A3B2F" },
@@ -33,7 +34,7 @@ export default function SendScreen() {
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert("Success", `Sending ₦${amount} to ${recipient}`);
+    router.push("/send-money");
   };
 
   return (
