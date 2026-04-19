@@ -108,7 +108,6 @@ function LivraField({
     const user = MOCK_LIVRA_USERS[key];
     setScanned(true);
     setDetectedUser({ ...user, account: key });
-    onHideGlobalPayment(false);
   };
 
   const handleRescan = () => {
@@ -116,7 +115,6 @@ function LivraField({
     setDetectedUser(null);
     setScanAmount("");
     setScanNote("");
-    onHideGlobalPayment(true);
   };
 
   return (
