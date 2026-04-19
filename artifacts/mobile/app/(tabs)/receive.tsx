@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+
 import React, { useState } from "react";
 import {
   Alert,
@@ -29,12 +29,6 @@ const LIVRA_ID   = "PC-NG-005291";
 const USER_NAME  = "Darlington O.";
 const ACCOUNT_NO = "3300 5291 7812";
 
-const MOBILE_PROVIDERS = [
-  { key: "mtn",    label: "MTN MoMo",     color: "#FFC300", icon: "phone",   ussd: "*556#"   },
-  { key: "airtel", label: "Airtel Money",  color: "#E8001A", icon: "phone",   ussd: "*778#"   },
-  { key: "glo",    label: "Glo Money",     color: "#007A3D", icon: "phone",   ussd: "*777#"   },
-  { key: "9mobile",label: "9Mobile",       color: "#7EC242", icon: "phone",   ussd: "*789#"   },
-];
 
 const SHARE_OPTIONS = [
   { key: "copy",      label: "Copy",      bg: "#2C2C2C" },
@@ -54,34 +48,32 @@ function ShareIcon({ id }: { id: string }) {
 
 // ─── Mobile Money Tab ──────────────────────────────────────────────────────────
 function MobileMoneyTab() {
-  const [amount, setAmount]   = useState("");
-  const [phone, setPhone]     = useState("");
-  const [network, setNetwork] = useState("");
-  const [amountFocused, setAmountFocused]   = useState(false);
-  const [phoneFocused, setPhoneFocused]     = useState(false);
-  const [networkFocused, setNetworkFocused] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [phone,  setPhone]  = useState("");
+  const [amountFocused, setAmountFocused] = useState(false);
+  const [phoneFocused,  setPhoneFocused]  = useState(false);
 
   const handleDeposit = () => {
     if (!amount || isNaN(Number(amount))) { Alert.alert("Invalid Amount", "Please enter a valid amount."); return; }
-    if (!phone || phone.length < 10) { Alert.alert("Invalid Number", "Please enter a valid phone number."); return; }
-    Alert.alert("Deposit Initiated", `₦${Number(amount).toLocaleString()} deposit has been initiated from ${phone}.`);
+    if (!phone || phone.length < 10)      { Alert.alert("Invalid Number", "Please enter a valid phone number."); return; }
+    Alert.alert("Deposit Initiated", `₦${Number(amount).toLocaleString()} deposit has been initiated from +234${phone}.`);
   };
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
       <View style={s.infoBanner}>
         <Feather name="info" size={14} color={DEEP} />
-        <Text style={s.infoBannerText}>Enter your mobile money details to fund your Livra wallet instantly.</Text>
+        <Text style={s.infoBannerText}>Enter your mobile money details to fund your Livra wallet instantly. The network is detected automatically.</Text>
       </View>
 
       {/* Amount */}
       <Text style={s.fieldLabel}>Amount (₦)</Text>
       <View style={[s.fieldBox, amountFocused && s.fieldBoxFocused]}>
-        <View style={s.fieldIconWrap}><Feather name="dollar-sign" size={16} color={amountFocused ? DEEP : MUTED} /></View>
+        <View style={s.fieldPrefix}><Text style={s.fieldPrefixText}>₦</Text></View>
         <TextInput
           style={s.fieldInput}
-          placeholder="Enter amount"
-          placeholderTextColor={MUTED}
+          placeholder="0.00"
+          placeholderTextColor="#AABFAA"
           keyboardType="numeric"
           value={amount}
           onChangeText={setAmount}
@@ -95,30 +87,15 @@ function MobileMoneyTab() {
       <View style={[s.fieldBox, phoneFocused && s.fieldBoxFocused]}>
         <View style={s.dialCode}><Text style={s.dialCodeText}>🇳🇬 +234</Text></View>
         <TextInput
-          style={[s.fieldInput, { flex: 1 }]}
+          style={s.fieldInput}
           placeholder="080 0000 0000"
-          placeholderTextColor={MUTED}
+          placeholderTextColor="#AABFAA"
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
           onFocus={() => setPhoneFocused(true)}
           onBlur={() => setPhoneFocused(false)}
           maxLength={11}
-        />
-      </View>
-
-      {/* Network */}
-      <Text style={s.fieldLabel}>Network / Provider</Text>
-      <View style={[s.fieldBox, networkFocused && s.fieldBoxFocused]}>
-        <View style={s.fieldIconWrap}><Feather name="wifi" size={16} color={networkFocused ? DEEP : MUTED} /></View>
-        <TextInput
-          style={s.fieldInput}
-          placeholder="e.g. MTN MoMo, Airtel Money"
-          placeholderTextColor={MUTED}
-          value={network}
-          onChangeText={setNetwork}
-          onFocus={() => setNetworkFocused(true)}
-          onBlur={() => setNetworkFocused(false)}
         />
       </View>
 
@@ -239,13 +216,8 @@ export default function ReceiveScreen() {
     <View style={[s.root, { paddingTop: topPad }]}>
       {/* Header */}
       <View style={s.header}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Feather name="chevron-left" size={20} color={DEEP} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={s.title}>Fund Account</Text>
-          <Text style={s.subtitle}>Choose how you'd like to deposit money</Text>
-        </View>
+        <Text style={s.title}>Fund Account</Text>
+        <Text style={s.subtitle}>Choose how you'd like to deposit money</Text>
       </View>
 
       {/* Tabs */}
@@ -274,10 +246,9 @@ export default function ReceiveScreen() {
 
 const s = StyleSheet.create({
   root:    { flex: 1, backgroundColor: BG },
-  header:  { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 18, paddingBottom: 16, paddingTop: 8 },
-  backBtn: { width: 38, height: 38, borderRadius: 11, borderWidth: 1.5, borderColor: BORDER, alignItems: "center", justifyContent: "center", backgroundColor: CARD },
-  title:   { fontFamily: "Inter_700Bold", fontSize: 20, color: DEEP },
-  subtitle:{ fontFamily: "Inter_400Regular", fontSize: 12, color: MUTED, marginTop: 2 },
+  header:  { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 18 },
+  title:   { fontFamily: "Inter_700Bold", fontSize: 24, color: DEEP, marginBottom: 4 },
+  subtitle:{ fontFamily: "Inter_400Regular", fontSize: 13, color: MUTED },
 
   tabBar:          { flexDirection: "row", marginHorizontal: 18, marginBottom: 16, backgroundColor: CARD, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: BORDER },
   tabBtn:          { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 11, borderRadius: 11 },
@@ -292,14 +263,19 @@ const s = StyleSheet.create({
 
   sectionLabel: { color: DEEP, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 10 },
 
-  fieldLabel:      { color: DEEP, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8 },
-  fieldBox:        { flexDirection: "row", alignItems: "center", backgroundColor: CARD, borderRadius: 14, borderWidth: 1.5, borderColor: BORDER, paddingHorizontal: 14, paddingVertical: 4, marginBottom: 18, minHeight: 54 },
-  fieldBoxFocused: { borderColor: DEEP, borderWidth: 2 },
-  fieldIconWrap:   { marginRight: 10 },
-  fieldInput:      { flex: 1, color: DEEP, fontSize: 15, fontFamily: "Inter_500Medium", paddingVertical: 10 },
+  fieldLabel:      { color: DEEP, fontSize: 13, fontFamily: "Inter_700Bold", marginBottom: 8, marginTop: 4 },
+  fieldBox:        {
+    flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF",
+    borderRadius: 14, borderWidth: 2, borderColor: "#C8D8C8",
+    paddingHorizontal: 14, height: 58, marginBottom: 20,
+  },
+  fieldBoxFocused: { borderColor: DEEP, borderWidth: 2.5 },
+  fieldPrefix:     { marginRight: 8 },
+  fieldPrefixText: { color: DEEP, fontSize: 18, fontFamily: "Inter_700Bold" },
+  fieldInput:      { flex: 1, color: DEEP, fontSize: 16, fontFamily: "Inter_600SemiBold" },
 
-  dialCode:    { backgroundColor: "#EEF3EE", borderRadius: 9, paddingHorizontal: 11, paddingVertical: 8, marginRight: 10, borderWidth: 1, borderColor: BORDER },
-  dialCodeText:{ color: DEEP, fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  dialCode:    { backgroundColor: "#DCF0DC", borderRadius: 9, paddingHorizontal: 12, paddingVertical: 9, marginRight: 12, borderWidth: 1.5, borderColor: "#B8D4B8" },
+  dialCodeText:{ color: DEEP, fontSize: 13, fontFamily: "Inter_700Bold" },
 
   primaryBtn:     { backgroundColor: DEEP, borderRadius: 16, paddingVertical: 17, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 6 },
   primaryBtnText: { color: LIME, fontSize: 15, fontFamily: "Inter_700Bold" },
