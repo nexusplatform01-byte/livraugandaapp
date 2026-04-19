@@ -54,90 +54,73 @@ function ShareIcon({ id }: { id: string }) {
 
 // ─── Mobile Money Tab ──────────────────────────────────────────────────────────
 function MobileMoneyTab() {
-  const [selected, setSelected] = useState<string | null>(null);
-  const [amount, setAmount]     = useState("");
-  const [phone, setPhone]       = useState("");
-
-  const provider = MOBILE_PROVIDERS.find((p) => p.key === selected);
+  const [amount, setAmount]   = useState("");
+  const [phone, setPhone]     = useState("");
+  const [network, setNetwork] = useState("");
+  const [amountFocused, setAmountFocused]   = useState(false);
+  const [phoneFocused, setPhoneFocused]     = useState(false);
+  const [networkFocused, setNetworkFocused] = useState(false);
 
   const handleDeposit = () => {
-    if (!selected) { Alert.alert("Select Provider", "Please choose a mobile money provider."); return; }
     if (!amount || isNaN(Number(amount))) { Alert.alert("Invalid Amount", "Please enter a valid amount."); return; }
     if (!phone || phone.length < 10) { Alert.alert("Invalid Number", "Please enter a valid phone number."); return; }
-    Alert.alert("Deposit Initiated", `₦${Number(amount).toLocaleString()} deposit via ${provider?.label} has been initiated.\n\nDial ${provider?.ussd} to confirm on your phone.`);
+    Alert.alert("Deposit Initiated", `₦${Number(amount).toLocaleString()} deposit has been initiated from ${phone}.`);
   };
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
-      {/* Info banner */}
       <View style={s.infoBanner}>
         <Feather name="info" size={14} color={DEEP} />
-        <Text style={s.infoBannerText}>Select your mobile money provider and enter the amount to fund your Livra wallet.</Text>
+        <Text style={s.infoBannerText}>Enter your mobile money details to fund your Livra wallet instantly.</Text>
       </View>
 
-      {/* Provider grid */}
-      <Text style={s.sectionLabel}>Choose Provider</Text>
-      <View style={s.providerGrid}>
-        {MOBILE_PROVIDERS.map((p) => {
-          const active = selected === p.key;
-          return (
-            <TouchableOpacity
-              key={p.key}
-              style={[s.providerCard, active && { borderColor: p.color, backgroundColor: p.color + "0E" }]}
-              onPress={() => setSelected(p.key)}
-              activeOpacity={0.85}
-            >
-              <View style={[s.providerDot, { backgroundColor: p.color }]} />
-              <Text style={[s.providerLabel, active && { color: DEEP, fontFamily: "Inter_700Bold" }]}>{p.label}</Text>
-              <Text style={s.providerUssd}>{p.ussd}</Text>
-              {active && (
-                <View style={[s.providerCheck, { backgroundColor: p.color }]}>
-                  <Feather name="check" size={10} color="#FFF" />
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Amount + Phone */}
-      <Text style={s.sectionLabel}>Deposit Details</Text>
-      <View style={s.inputCard}>
-        <Text style={s.inputLabel}>Amount (₦)</Text>
+      {/* Amount */}
+      <Text style={s.fieldLabel}>Amount (₦)</Text>
+      <View style={[s.fieldBox, amountFocused && s.fieldBoxFocused]}>
+        <View style={s.fieldIconWrap}><Feather name="dollar-sign" size={16} color={amountFocused ? DEEP : MUTED} /></View>
         <TextInput
-          style={s.input}
-          placeholder="0.00"
+          style={s.fieldInput}
+          placeholder="Enter amount"
           placeholderTextColor={MUTED}
           keyboardType="numeric"
           value={amount}
           onChangeText={setAmount}
+          onFocus={() => setAmountFocused(true)}
+          onBlur={() => setAmountFocused(false)}
         />
       </View>
 
-      <View style={s.inputCard}>
-        <Text style={s.inputLabel}>Mobile Money Phone Number</Text>
-        <View style={s.phoneRow}>
-          <View style={s.dialCode}><Text style={s.dialCodeText}>🇳🇬 +234</Text></View>
-          <TextInput
-            style={[s.input, { flex: 1 }]}
-            placeholder="080 0000 0000"
-            placeholderTextColor={MUTED}
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-            maxLength={11}
-          />
-        </View>
+      {/* Phone */}
+      <Text style={s.fieldLabel}>Mobile Money Number</Text>
+      <View style={[s.fieldBox, phoneFocused && s.fieldBoxFocused]}>
+        <View style={s.dialCode}><Text style={s.dialCodeText}>🇳🇬 +234</Text></View>
+        <TextInput
+          style={[s.fieldInput, { flex: 1 }]}
+          placeholder="080 0000 0000"
+          placeholderTextColor={MUTED}
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+          onFocus={() => setPhoneFocused(true)}
+          onBlur={() => setPhoneFocused(false)}
+          maxLength={11}
+        />
       </View>
 
-      {provider && (
-        <View style={[s.ussdNote, { borderColor: provider.color + "55", backgroundColor: provider.color + "0A" }]}>
-          <Feather name="terminal" size={13} color={provider.color} />
-          <Text style={[s.ussdNoteText, { color: provider.color }]}>
-            After submitting, dial <Text style={{ fontFamily: "Inter_700Bold" }}>{provider.ussd}</Text> on your {provider.label} line to authorize the payment.
-          </Text>
-        </View>
-      )}
+      {/* Network */}
+      <Text style={s.fieldLabel}>Network / Provider</Text>
+      <View style={[s.fieldBox, networkFocused && s.fieldBoxFocused]}>
+        <View style={s.fieldIconWrap}><Feather name="wifi" size={16} color={networkFocused ? DEEP : MUTED} /></View>
+        <TextInput
+          style={s.fieldInput}
+          placeholder="e.g. MTN MoMo, Airtel Money"
+          placeholderTextColor={MUTED}
+          value={network}
+          onChangeText={setNetwork}
+          onFocus={() => setNetworkFocused(true)}
+          onBlur={() => setNetworkFocused(false)}
+        />
+      </View>
 
       <TouchableOpacity style={s.primaryBtn} onPress={handleDeposit} activeOpacity={0.85}>
         <Feather name="arrow-down-circle" size={18} color={LIME} />
@@ -304,30 +287,19 @@ const s = StyleSheet.create({
 
   scrollContent: { paddingHorizontal: 18, paddingBottom: 40 },
 
-  infoBanner:     { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "#E8F5E0", borderRadius: 12, padding: 12, marginBottom: 18, borderWidth: 1, borderColor: "#C8E6C9" },
+  infoBanner:     { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "#E8F5E0", borderRadius: 12, padding: 12, marginBottom: 20, borderWidth: 1, borderColor: "#C8E6C9" },
   infoBannerText: { color: DEEP, fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 17 },
 
   sectionLabel: { color: DEEP, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 10 },
 
-  providerGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 },
-  providerCard: {
-    width: "47.5%", backgroundColor: CARD, borderRadius: 14, padding: 14,
-    borderWidth: 1.5, borderColor: BORDER, position: "relative",
-  },
-  providerDot:   { width: 10, height: 10, borderRadius: 5, marginBottom: 8 },
-  providerLabel: { color: MUTED, fontSize: 13, fontFamily: "Inter_500Medium", marginBottom: 3 },
-  providerUssd:  { color: "#AAB8AA", fontSize: 11, fontFamily: "Inter_400Regular" },
-  providerCheck: { position: "absolute", top: 10, right: 10, width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  fieldLabel:      { color: DEEP, fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 8 },
+  fieldBox:        { flexDirection: "row", alignItems: "center", backgroundColor: CARD, borderRadius: 14, borderWidth: 1.5, borderColor: BORDER, paddingHorizontal: 14, paddingVertical: 4, marginBottom: 18, minHeight: 54 },
+  fieldBoxFocused: { borderColor: DEEP, borderWidth: 2 },
+  fieldIconWrap:   { marginRight: 10 },
+  fieldInput:      { flex: 1, color: DEEP, fontSize: 15, fontFamily: "Inter_500Medium", paddingVertical: 10 },
 
-  inputCard:  { backgroundColor: CARD, borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: BORDER },
-  inputLabel: { color: MUTED, fontSize: 11, fontFamily: "Inter_500Medium", marginBottom: 8 },
-  input:      { color: DEEP, fontSize: 16, fontFamily: "Inter_500Medium", paddingVertical: 4 },
-  phoneRow:   { flexDirection: "row", gap: 10, alignItems: "center" },
-  dialCode:   { backgroundColor: BG, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: BORDER },
-  dialCodeText:{ color: DEEP, fontSize: 13, fontFamily: "Inter_500Medium" },
-
-  ussdNote:     { flexDirection: "row", alignItems: "flex-start", gap: 8, borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1 },
-  ussdNoteText: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 17 },
+  dialCode:    { backgroundColor: "#EEF3EE", borderRadius: 9, paddingHorizontal: 11, paddingVertical: 8, marginRight: 10, borderWidth: 1, borderColor: BORDER },
+  dialCodeText:{ color: DEEP, fontSize: 13, fontFamily: "Inter_600SemiBold" },
 
   primaryBtn:     { backgroundColor: DEEP, borderRadius: 16, paddingVertical: 17, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 6 },
   primaryBtnText: { color: LIME, fontSize: 15, fontFamily: "Inter_700Bold" },
