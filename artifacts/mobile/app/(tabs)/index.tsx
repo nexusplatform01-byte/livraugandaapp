@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Alert, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { BalanceCard } from "@/components/BalanceCard";
 import { HomeHeader } from "@/components/HomeHeader";
 import { QuickActions } from "@/components/QuickActions";
@@ -33,7 +34,7 @@ export default function HomeScreen() {
         <BalanceCard
           balance={BALANCES[currency]}
           currency={currencySymbol}
-          onFund={() => Alert.alert("Fund", "Fund wallet feature coming soon")}
+          onFund={() => router.push("/receive")}
           onSend={() => Alert.alert("Send", "Send money feature coming soon")}
         />
         <WalletTabs
