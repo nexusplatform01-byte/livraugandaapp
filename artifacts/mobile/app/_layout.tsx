@@ -24,8 +24,6 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="receive" options={{ presentation: "card", animation: "slide_from_right" }} />
-      <Stack.Screen name="send-money" options={{ presentation: "card", animation: "slide_from_right" }} />
     </Stack>
   );
 }

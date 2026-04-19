@@ -15,7 +15,6 @@ import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { BankIcon } from "@/components/QuickActionIcons";
-import { AppTabBar } from "@/components/AppTabBar";
 
 const DARK_GREEN = "#1A3B2F";
 const LIME = "#C6F135";
@@ -167,8 +166,6 @@ export default function SendMoneyScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Bottom navigation bar */}
-        <AppTabBar />
       </View>
     </KeyboardAvoidingView>
   );
@@ -236,7 +233,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
   },
   bottomBar: {
-    paddingHorizontal: 40, paddingTop: 10, paddingBottom: 10, backgroundColor: BG,
+    paddingHorizontal: 40, paddingTop: 10, paddingBottom: 90, backgroundColor: BG,
     alignItems: "center",
   },
   confirmBtn: {
