@@ -110,10 +110,17 @@ export default function SendMoneyScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[styles.root, { paddingTop: Platform.OS === "web" ? 20 : insets.top }]}>
 
-        {/* Back button only — no heading */}
-        <TouchableOpacity style={[styles.backBtn, { marginHorizontal: 16, marginBottom: 12 }]} onPress={() => router.back()}>
-          <Feather name="chevron-left" size={20} color={DARK_GREEN} />
-        </TouchableOpacity>
+        {/* Compact dark green header */}
+        <View style={styles.topBar}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Feather name="chevron-left" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={styles.topBarCenter}>
+            <Text style={styles.topBarLabel}>Your Wallet Balance</Text>
+            <Text style={styles.topBarBalance}>₦209,891.21</Text>
+          </View>
+          <View style={{ width: 36 }} />
+        </View>
 
         {/* 2×2 compact grid */}
         <View style={styles.grid}>
@@ -169,11 +176,31 @@ export default function SendMoneyScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
+  topBar: {
+    backgroundColor: DARK_GREEN,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 12,
+  },
+  topBarCenter: { flex: 1, alignItems: "center" },
+  topBarLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+    color: LIME,
+    marginBottom: 3,
+  },
+  topBarBalance: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 22,
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
+  },
   backBtn: {
     width: 36, height: 36, borderRadius: 10,
-    borderWidth: 1.5, borderColor: "#D0D5D0",
+    borderWidth: 1.5, borderColor: "rgba(255,255,255,0.3)",
     alignItems: "center", justifyContent: "center",
-    backgroundColor: "#FFF",
   },
   grid: {
     flexDirection: "row", flexWrap: "wrap",
