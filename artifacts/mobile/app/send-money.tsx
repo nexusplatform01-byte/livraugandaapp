@@ -183,6 +183,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 12,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
   topBarCenter: { flex: 1, alignItems: "center" },
   topBarLabel: {
