@@ -62,9 +62,6 @@ function NativeTabLayout() {
       <NativeTabs.Trigger name="receive" style={{ display: "none" }}>
         <Label>Receive</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="send-money" style={{ display: "none" }}>
-        <Label>Send Money</Label>
-      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -160,10 +157,6 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="receive"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="send-money"
         options={{ href: null }}
       />
     </Tabs>

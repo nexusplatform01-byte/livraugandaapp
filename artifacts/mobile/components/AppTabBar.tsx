@@ -58,7 +58,7 @@ export function AppTabBar({ activeTab = "" }: { activeTab?: string }) {
         <View style={[styles.centerGap, { overflow: "visible" }]}>
           <TouchableOpacity
             style={styles.sendOuter}
-            onPress={() => router.push("/send-money")}
+            onPress={() => router.replace("/send")}
             activeOpacity={0.85}
           >
             <View style={styles.sendBtn}>
