@@ -42,7 +42,7 @@ const LOAN_TYPES = [
     icon: "user",
     color: "#54A0FF",
     gradient: ["#1A2E4A", "#0D1F17"] as [string, string],
-    limit: "₦500K",
+    limit: "UGX 500K",
   },
   {
     key: "business" as const,
@@ -51,7 +51,7 @@ const LOAN_TYPES = [
     icon: "briefcase",
     color: "#FF9F43",
     gradient: ["#3A2510", "#0D1F17"] as [string, string],
-    limit: "₦5M",
+    limit: "UGX 5M",
   },
   {
     key: "work_allowance" as const,
@@ -60,7 +60,7 @@ const LOAN_TYPES = [
     icon: "award",
     color: LIME,
     gradient: ["#1C3828", "#0D1F17"] as [string, string],
-    limit: "₦2M",
+    limit: "UGX 2M",
   },
 ];
 
@@ -96,7 +96,7 @@ const LOAN_HISTORY = [
   { id: "3", amount: 80000,  type: "Work Allowance", status: "Paid",   date: "Oct 2024", interest: "3%" },
 ];
 
-function fmt(n: number) { return "₦" + n.toLocaleString("en-NG"); }
+function fmt(n: number) { return "UGX " + n.toLocaleString("en-UG"); }
 
 function StepDots({ current, total }: { current: number; total: number }) {
   return (

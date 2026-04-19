@@ -56,7 +56,7 @@ function MobileMoneyTab() {
   const handleDeposit = () => {
     if (!amount || isNaN(Number(amount))) { Alert.alert("Invalid Amount", "Please enter a valid amount."); return; }
     if (!phone || phone.length < 10)      { Alert.alert("Invalid Number", "Please enter a valid phone number."); return; }
-    Alert.alert("Deposit Initiated", `₦${Number(amount).toLocaleString()} deposit has been initiated from +234${phone}.`);
+    Alert.alert("Deposit Initiated", `UGX ${Number(amount).toLocaleString()} deposit has been initiated from +256${phone}.`);
   };
 
   return (
@@ -67,9 +67,9 @@ function MobileMoneyTab() {
       </View>
 
       {/* Amount */}
-      <Text style={s.fieldLabel}>Amount (₦)</Text>
+      <Text style={s.fieldLabel}>Amount (UGX)</Text>
       <View style={[s.fieldBox, amountFocused && s.fieldBoxFocused]}>
-        <View style={s.fieldPrefix}><Text style={s.fieldPrefixText}>₦</Text></View>
+        <View style={s.fieldPrefix}><Text style={s.fieldPrefixText}>UGX</Text></View>
         <TextInput
           style={s.fieldInput}
           placeholder="0.00"
@@ -221,7 +221,7 @@ export default function ReceiveScreen() {
       <View style={[s.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
         <View style={s.topBarCenter}>
           <Text style={s.topBarLabel}>Your Wallet Balance</Text>
-          <Text style={s.topBarBalance}>₦209,891.21</Text>
+          <Text style={s.topBarBalance}>UGX 209,891</Text>
         </View>
       </View>
 

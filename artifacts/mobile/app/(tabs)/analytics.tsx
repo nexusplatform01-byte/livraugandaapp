@@ -46,7 +46,7 @@ const TRANSACTIONS = [
 ];
 
 function fmt(n: number) {
-  return "₦" + Math.abs(n).toLocaleString("en-NG", { minimumFractionDigits: 0 });
+  return "UGX " + Math.abs(n).toLocaleString("en-UG", { minimumFractionDigits: 0 });
 }
 
 function Bar({ inVal, outVal, maxVal, active }: { inVal: number; outVal: number; maxVal: number; active: boolean }) {
@@ -94,7 +94,7 @@ export default function AnalyticsScreen() {
             <Feather name="arrow-down-left" size={14} color={LIME} />
           </View>
           <Text style={s.statLabel}>Income</Text>
-          <Text style={s.statValue}>₦{(totalIn / 1000).toFixed(0)}K</Text>
+          <Text style={s.statValue}>UGX {(totalIn / 1000).toFixed(0)}K</Text>
           <Text style={s.statSub}>+12% vs last period</Text>
         </LinearGradient>
 
@@ -103,7 +103,7 @@ export default function AnalyticsScreen() {
             <Feather name="arrow-up-right" size={14} color={RED} />
           </View>
           <Text style={[s.statLabel, { color: RED }]}>Spent</Text>
-          <Text style={[s.statValue, { color: RED }]}>₦{(totalOut / 1000).toFixed(0)}K</Text>
+          <Text style={[s.statValue, { color: RED }]}>UGX {(totalOut / 1000).toFixed(0)}K</Text>
           <Text style={s.statSub}>-5% vs last period</Text>
         </LinearGradient>
 
@@ -113,7 +113,7 @@ export default function AnalyticsScreen() {
           </View>
           <Text style={[s.statLabel, { color: LIME }]}>Saved</Text>
           <Text style={[s.statValue, { color: LIME }]}>{savingsPct}%</Text>
-          <Text style={s.statSub}>₦{(net / 1000).toFixed(0)}K net</Text>
+          <Text style={s.statSub}>UGX {(net / 1000).toFixed(0)}K net</Text>
         </LinearGradient>
       </View>
 
@@ -158,7 +158,7 @@ export default function AnalyticsScreen() {
           </View>
           {activeBar >= 0 && (
             <Text style={s.activeMonthText}>
-              {MONTHS[activeBar]}: ₦{(DATA_IN[activeBar]/1000).toFixed(0)}K / ₦{(DATA_OUT[activeBar]/1000).toFixed(0)}K
+              {MONTHS[activeBar]}: UGX {(DATA_IN[activeBar]/1000).toFixed(0)}K / UGX {(DATA_OUT[activeBar]/1000).toFixed(0)}K
             </Text>
           )}
         </View>

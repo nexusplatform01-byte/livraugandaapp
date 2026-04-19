@@ -183,7 +183,7 @@ function LivraField({
             </View>
           </View>
 
-          <Field label="Amount (₦)" placeholder="0.00" keyboardType="numeric" value={scanAmount} onChangeText={setScanAmount} />
+          <Field label="Amount (UGX)" placeholder="0.00" keyboardType="numeric" value={scanAmount} onChangeText={setScanAmount} />
           <Field label="Note (optional)" placeholder="What's this for?" value={scanNote} onChangeText={setScanNote} />
 
           <TouchableOpacity style={fs.rescanBtn} onPress={handleRescan} activeOpacity={0.7}>
@@ -224,7 +224,7 @@ function FormFields({ type }: { type: SendType }) {
       </>}
       {type === "online" && <Field label="Merchant" placeholder="e.g. Amazon, Paystack" value={merchant} onChangeText={setMerchant} />}
       {(type !== "livra" || !hidePayment) && <>
-        <Field label="Amount (₦)" placeholder="0.00" keyboardType="numeric" value={amount} onChangeText={setAmount} />
+        <Field label="Amount (UGX)" placeholder="0.00" keyboardType="numeric" value={amount} onChangeText={setAmount} />
         <Field label="Note (optional)" placeholder="What's this for?" value={note} onChangeText={setNote} />
       </>}
     </View>
@@ -243,7 +243,7 @@ export default function SendScreen() {
         <View style={[styles.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
           <View style={styles.topBarCenter}>
             <Text style={styles.topBarLabel}>Your Wallet Balance</Text>
-            <Text style={styles.topBarBalance}>₦209,891.21</Text>
+            <Text style={styles.topBarBalance}>UGX 209,891</Text>
           </View>
         </View>
 

@@ -83,7 +83,7 @@ const FREQUENCIES = ["Daily", "Weekly", "Bi-weekly", "Monthly"];
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmt(n: number) {
-  return "₦" + n.toLocaleString("en-NG", { minimumFractionDigits: 2 });
+  return "UGX " + n.toLocaleString("en-UG", { minimumFractionDigits: 2 });
 }
 function pct(balance: number, target: number) {
   return Math.min(100, Math.round((balance / target) * 100));
@@ -223,7 +223,7 @@ function SavingModeStep({
 
           {selected === "goal" && (
             <>
-              <Text style={s.fieldLabel}>Goal Target (₦)</Text>
+              <Text style={s.fieldLabel}>Goal Target (UGX)</Text>
               <TextInput
                 style={s.fieldInput}
                 placeholder="500,000"
@@ -237,7 +237,7 @@ function SavingModeStep({
 
           {selected === "automatic" && (
             <>
-              <Text style={s.fieldLabel}>Auto-Deduct Amount (₦)</Text>
+              <Text style={s.fieldLabel}>Auto-Deduct Amount (UGX)</Text>
               <TextInput
                 style={s.fieldInput}
                 placeholder="10,000"
@@ -265,7 +265,7 @@ function SavingModeStep({
 
           {selected === "fixed" && (
             <>
-              <Text style={s.fieldLabel}>Opening Amount (₦)</Text>
+              <Text style={s.fieldLabel}>Opening Amount (UGX)</Text>
               <TextInput
                 style={s.fieldInput}
                 placeholder="50,000"

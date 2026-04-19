@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 
-const CURRENCIES = ["NGN", "USD", "EUR"];
+const CURRENCIES = ["UGX", "USD", "EUR"];
 
 interface WalletTabsProps {
   selected: string;

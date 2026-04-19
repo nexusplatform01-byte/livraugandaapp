@@ -10,7 +10,7 @@ interface BalanceCardProps {
   onSend?: () => void;
 }
 
-export function BalanceCard({ balance, currency = "₦", onFund, onSend }: BalanceCardProps) {
+export function BalanceCard({ balance, currency = "UGX ", onFund, onSend }: BalanceCardProps) {
   const [hidden, setHidden] = useState(false);
 
 

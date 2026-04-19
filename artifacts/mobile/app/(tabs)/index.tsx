@@ -9,20 +9,20 @@ import { TransactionList } from "@/components/TransactionList";
 import { WalletTabs } from "@/components/WalletTabs";
 
 const BALANCES: Record<string, number> = {
-  NGN: 209891.21,
+  UGX: 209891.21,
   USD: 128.43,
   EUR: 119.87,
 };
 
 export default function HomeScreen() {
-  const [currency, setCurrency] = useState("NGN");
+  const [currency, setCurrency] = useState("UGX");
   const insets = useSafeAreaInsets();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : 0;
 
   const currencySymbol =
-    currency === "NGN" ? "₦" : currency === "USD" ? "$" : "€";
+    currency === "UGX" ? "UGX " : currency === "USD" ? "$" : "€";
 
   return (
     <View style={styles.root}>
