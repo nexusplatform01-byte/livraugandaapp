@@ -55,9 +55,9 @@ function NativeTabLayout() {
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
         <Label>Analytics</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="card">
-        <Icon sf={{ default: "creditcard", selected: "creditcard.fill" }} />
-        <Label>Card</Label>
+      <NativeTabs.Trigger name="savings">
+        <Icon sf={{ default: "banknote", selected: "banknote.fill" }} />
+        <Label>Savings</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="receive" style={{ display: "none" }}>
         <Label>Receive</Label>
@@ -144,14 +144,14 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="card"
+        name="savings"
         options={{
-          title: "Card",
+          title: "Savings",
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="creditcard" tintColor={color} size={22} />
+              <SymbolView name="banknote" tintColor={color} size={22} />
             ) : (
-              <Feather name="credit-card" size={22} color={color} />
+              <Feather name="layers" size={22} color={color} />
             ),
         }}
       />

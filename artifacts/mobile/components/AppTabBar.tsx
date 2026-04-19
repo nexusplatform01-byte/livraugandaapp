@@ -68,7 +68,7 @@ export function AppTabBar({ activeTab = "" }: { activeTab?: string }) {
         </View>
 
         <TabBtn icon="bar-chart-2" label="Analytics" active={activeTab === "analytics"} onPress={() => router.replace("/analytics")} />
-        <TabBtn icon="layers"      label="Card"      active={activeTab === "card"}      onPress={() => router.replace("/card")}      />
+        <TabBtn icon="layers"      label="Savings"   active={activeTab === "savings"}   onPress={() => router.replace("/savings")}   />
       </View>
     </View>
   );
