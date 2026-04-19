@@ -57,13 +57,11 @@ export function AppTabBar({ activeTab = "" }: { activeTab?: string }) {
 
         <View style={[styles.centerGap, { overflow: "visible" }]}>
           <TouchableOpacity
-            style={styles.sendOuter}
+            style={styles.sendBtn}
             onPress={() => router.push("/send-money")}
             activeOpacity={0.85}
           >
-            <View style={styles.sendBtn}>
-              <Feather name="navigation" size={22} color={TAB_BG} />
-            </View>
+            <Feather name="navigation" size={22} color={TAB_BG} />
           </TouchableOpacity>
         </View>
 
@@ -97,23 +95,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-start",
   },
-  sendOuter: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: "#F5F7F5",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "absolute",
-    top: -38,
-  },
   sendBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: LIME,
     alignItems: "center",
     justifyContent: "center",
+    position: "absolute",
+    top: -22,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
