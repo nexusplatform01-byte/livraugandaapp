@@ -224,7 +224,7 @@ function FormFields({ type }: { type: SendType }) {
         <Field label="Account Number" placeholder="10-digit number" keyboardType="numeric" value={accNum} onChangeText={setAccNum} />
       </>}
       {type === "online" && <Field label="Merchant" placeholder="e.g. Amazon, Paystack" value={merchant} onChangeText={setMerchant} />}
-      {!hidePayment && <>
+      {(type !== "livra" || !hidePayment) && <>
         <Field label="Amount (₦)" placeholder="0.00" keyboardType="numeric" value={amount} onChangeText={setAmount} />
         <Field label="Note (optional)" placeholder="What's this for?" value={note} onChangeText={setNote} />
       </>}
