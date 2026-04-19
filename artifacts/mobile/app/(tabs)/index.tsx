@@ -43,7 +43,15 @@ export default function HomeScreen() {
           onAdd={() => Alert.alert("Add Wallet", "Add new wallet feature coming soon")}
         />
       </View>
-      <QuickActions onAction={(k) => Alert.alert(k, `${k} feature coming soon`)} />
+      <QuickActions
+        onAction={(k) => {
+          if (k === "airtime") {
+            router.push("/buy?cat=airtime");
+          } else {
+            Alert.alert(k, `${k} feature coming soon`);
+          }
+        }}
+      />
       <View style={styles.divider} />
       <ScrollView
         style={styles.scroll}
