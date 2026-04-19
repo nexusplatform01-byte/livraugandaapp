@@ -176,12 +176,6 @@ function SavingModeStep({
       contentContainerStyle={{ paddingTop: topPad + 20, paddingBottom: 120, paddingHorizontal: 20 }}
       showsVerticalScrollIndicator={false}
     >
-      {/* Back */}
-      <TouchableOpacity style={s.backBtn} onPress={onBack}>
-        <Feather name="arrow-left" size={18} color={LIME} />
-        <Text style={s.backText}>Back</Text>
-      </TouchableOpacity>
-
       <Text style={s.stepTitle}>Choose Saving Type</Text>
       <Text style={[s.stepSub, { marginBottom: 22 }]}>
         {ACCOUNT_TYPE_INFO[accountType].label} Account
