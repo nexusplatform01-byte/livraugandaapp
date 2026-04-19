@@ -35,7 +35,7 @@ export default function HomeScreen() {
           balance={BALANCES[currency]}
           currency={currencySymbol}
           onFund={() => router.push("/receive")}
-          onSend={() => Alert.alert("Send", "Send money feature coming soon")}
+          onSend={() => router.push("/send-money")}
         />
         <WalletTabs
           selected={currency}
