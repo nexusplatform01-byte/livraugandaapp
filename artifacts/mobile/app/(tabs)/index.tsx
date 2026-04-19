@@ -45,11 +45,10 @@ export default function HomeScreen() {
       </View>
       <QuickActions
         onAction={(k) => {
-          if (k === "airtime") {
-            router.push("/buy?cat=airtime");
-          } else {
-            Alert.alert(k, `${k} feature coming soon`);
-          }
+          if (k === "airtime")  router.push("/buy");
+          else if (k === "bank") router.push("/bank");
+          else if (k === "pay")  router.push("/pay");
+          else Alert.alert(k, `${k} feature coming soon`);
         }}
       />
       <View style={styles.divider} />

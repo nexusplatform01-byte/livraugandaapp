@@ -25,6 +25,8 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="buy" />
+      <Stack.Screen name="pay" />
+      <Stack.Screen name="bank" />
     </Stack>
   );
 }
