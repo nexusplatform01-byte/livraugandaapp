@@ -153,7 +153,7 @@ export default function SendMoneyScreen() {
           <FormFields type={selected} />
         </ScrollView>
 
-        {/* Confirm button — narrowed, centered */}
+        {/* Confirm button — sits above nav bar */}
         <View style={styles.bottomBar}>
           <TouchableOpacity
             style={[styles.confirmBtn, !selected && styles.confirmBtnOff]}
@@ -165,6 +165,7 @@ export default function SendMoneyScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+        <View style={styles.navSpacer} />
 
       </View>
     </KeyboardAvoidingView>
@@ -233,13 +234,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
   },
   bottomBar: {
-    paddingHorizontal: 40, paddingTop: 10, paddingBottom: 90, backgroundColor: BG,
-    alignItems: "center",
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12, backgroundColor: BG,
+  },
+  navSpacer: {
+    height: 84,
+    backgroundColor: BG,
   },
   confirmBtn: {
     backgroundColor: DARK_GREEN, borderRadius: 14,
-    paddingVertical: 13, paddingHorizontal: 36,
-    alignItems: "center", minWidth: 180,
+    paddingVertical: 17,
+    alignItems: "center",
   },
   confirmBtnOff: { backgroundColor: "#C8D8C8" },
   confirmText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: LIME },
