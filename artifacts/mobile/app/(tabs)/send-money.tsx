@@ -70,15 +70,54 @@ function ChipRow({ items, selected, onSelect }: { items: string[]; selected: str
   );
 }
 
-function LivraField({ account, onChangeAccount }: { account: string; onChangeAccount: (v: string) => void }) {
-  const [mode, setMode] = useState<"enter" | "scan">("enter");
+const MOCK_LIVRA_USERS: Record<string, { name: string; initials: string; color: string }> = {
+  "AC24561": { name: "Chidi Okeke",   initials: "CO", color: "#1A3B2F" },
+  "BK19832": { name: "Amaka Eze",     initials: "AE", color: "#C0392B" },
+  "ZT55021": { name: "Bolu Adeyemi",  initials: "BA", color: "#1A6B4A" },
+};
+
+function LivraField({
+  onHideGlobalPayment,
+}: {
+  onHideGlobalPayment: (hide: boolean) => void;
+}) {
+  const [mode, setMode]           = useState<"enter" | "scan">("enter");
+  const [account, setAccount]     = useState("");
+  const [scanned, setScanned]     = useState(false);
+  const [detectedUser, setDetectedUser] = useState<{ name: string; initials: string; color: string; account: string } | null>(null);
+  const [scanAmount, setScanAmount] = useState("");
+  const [scanNote, setScanNote]   = useState("");
+
+  const handleModeSwitch = (m: "enter" | "scan") => {
+    setMode(m);
+    setScanned(false);
+    setDetectedUser(null);
+    onHideGlobalPayment(m === "scan");
+  };
 
   const handleAccountChange = (text: string) => {
     const upper = text.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    if (upper.length <= 7) onChangeAccount(upper);
+    if (upper.length <= 7) setAccount(upper);
   };
 
   const isValid = /^[A-Z]{2}\d{5}$/.test(account);
+
+  const handleScanTap = () => {
+    const keys = Object.keys(MOCK_LIVRA_USERS);
+    const key  = keys[Math.floor(Math.random() * keys.length)];
+    const user = MOCK_LIVRA_USERS[key];
+    setScanned(true);
+    setDetectedUser({ ...user, account: key });
+    onHideGlobalPayment(false);
+  };
+
+  const handleRescan = () => {
+    setScanned(false);
+    setDetectedUser(null);
+    setScanAmount("");
+    setScanNote("");
+    onHideGlobalPayment(true);
+  };
 
   return (
     <View style={fs.wrap}>
@@ -87,7 +126,7 @@ function LivraField({ account, onChangeAccount }: { account: string; onChangeAcc
       <View style={fs.livraToggleRow}>
         <TouchableOpacity
           style={[fs.livraToggleBtn, mode === "enter" && fs.livraToggleActive]}
-          onPress={() => setMode("enter")}
+          onPress={() => handleModeSwitch("enter")}
           activeOpacity={0.8}
         >
           <Feather name="edit-2" size={14} color={mode === "enter" ? "#FFF" : DARK_GREEN} />
@@ -95,7 +134,7 @@ function LivraField({ account, onChangeAccount }: { account: string; onChangeAcc
         </TouchableOpacity>
         <TouchableOpacity
           style={[fs.livraToggleBtn, mode === "scan" && fs.livraToggleActive]}
-          onPress={() => { setMode("scan"); Alert.alert("Scan QR", "Point your camera at the recipient's Livra QR code"); }}
+          onPress={() => handleModeSwitch("scan")}
           activeOpacity={0.8}
         >
           <Feather name="camera" size={14} color={mode === "scan" ? "#FFF" : DARK_GREEN} />
@@ -122,30 +161,53 @@ function LivraField({ account, onChangeAccount }: { account: string; onChangeAcc
         </View>
       )}
 
-      {mode === "scan" && (
-        <TouchableOpacity
-          style={fs.scanBox}
-          activeOpacity={0.8}
-          onPress={() => Alert.alert("Scan QR", "Point your camera at the recipient's Livra QR code")}
-        >
-          <Feather name="camera" size={32} color={DARK_GREEN} />
+      {mode === "scan" && !scanned && (
+        <TouchableOpacity style={fs.scanBox} activeOpacity={0.8} onPress={handleScanTap}>
+          <View style={fs.scanIconRing}>
+            <Feather name="camera" size={28} color={DARK_GREEN} />
+          </View>
           <Text style={fs.scanText}>Tap to scan QR code</Text>
-          <Text style={fs.scanSub}>Scan the recipient's Livra QR code</Text>
+          <Text style={fs.scanSub}>Point at the recipient's Livra QR code</Text>
         </TouchableOpacity>
+      )}
+
+      {mode === "scan" && scanned && detectedUser && (
+        <View>
+          <View style={fs.detectedCard}>
+            <View style={[fs.detectedAvatar, { backgroundColor: detectedUser.color }]}>
+              <Text style={fs.detectedInitials}>{detectedUser.initials}</Text>
+            </View>
+            <View style={fs.detectedInfo}>
+              <Text style={fs.detectedName}>{detectedUser.name}</Text>
+              <Text style={fs.detectedAccount}>{detectedUser.account}</Text>
+            </View>
+            <View style={fs.detectedBadge}>
+              <Feather name="check-circle" size={18} color="#30D158" />
+            </View>
+          </View>
+
+          <Field label="Amount (₦)" placeholder="0.00" keyboardType="numeric" value={scanAmount} onChangeText={setScanAmount} />
+          <Field label="Note (optional)" placeholder="What's this for?" value={scanNote} onChangeText={setScanNote} />
+
+          <TouchableOpacity style={fs.rescanBtn} onPress={handleRescan} activeOpacity={0.7}>
+            <Feather name="refresh-cw" size={13} color="#6B7B6E" />
+            <Text style={fs.rescanText}>Scan a different user</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
 }
 
 function FormFields({ type }: { type: SendType }) {
-  const [phone, setPhone]       = useState("");
-  const [network, setNetwork]   = useState("");
-  const [bank, setBank]         = useState("");
-  const [accNum, setAccNum]     = useState("");
-  const [livraAcc, setLivraAcc] = useState("");
-  const [merchant, setMerchant] = useState("");
-  const [amount, setAmount]     = useState("");
-  const [note, setNote]         = useState("");
+  const [phone, setPhone]         = useState("");
+  const [network, setNetwork]     = useState("");
+  const [bank, setBank]           = useState("");
+  const [accNum, setAccNum]       = useState("");
+  const [merchant, setMerchant]   = useState("");
+  const [amount, setAmount]       = useState("");
+  const [note, setNote]           = useState("");
+  const [hidePayment, setHidePayment] = useState(false);
 
   if (!type) return null;
   return (
@@ -155,15 +217,19 @@ function FormFields({ type }: { type: SendType }) {
         <Text style={fs.label}>Network</Text>
         <ChipRow items={NETWORKS} selected={network} onSelect={setNetwork} />
       </>}
-      {type === "livra" && <LivraField account={livraAcc} onChangeAccount={setLivraAcc} />}
+      {type === "livra" && (
+        <LivraField onHideGlobalPayment={setHidePayment} />
+      )}
       {type === "bank" && <>
         <Text style={fs.label}>Bank</Text>
         <ChipRow items={BANKS} selected={bank} onSelect={setBank} />
         <Field label="Account Number" placeholder="10-digit number" keyboardType="numeric" value={accNum} onChangeText={setAccNum} />
       </>}
       {type === "online" && <Field label="Merchant" placeholder="e.g. Amazon, Paystack" value={merchant} onChangeText={setMerchant} />}
-      <Field label="Amount (₦)" placeholder="0.00" keyboardType="numeric" value={amount} onChangeText={setAmount} />
-      <Field label="Note (optional)" placeholder="What's this for?" value={note} onChangeText={setNote} />
+      {!hidePayment && <>
+        <Field label="Amount (₦)" placeholder="0.00" keyboardType="numeric" value={amount} onChangeText={setAmount} />
+        <Field label="Note (optional)" placeholder="What's this for?" value={note} onChangeText={setNote} />
+      </>}
     </View>
   );
 }
@@ -356,12 +422,46 @@ const fs = StyleSheet.create({
     borderStyle: "dashed",
     backgroundColor: "#F8FCF0",
     alignItems: "center", justifyContent: "center",
-    paddingVertical: 28, gap: 8,
+    paddingVertical: 32, gap: 10,
+  },
+  scanIconRing: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: "#E8F5E3",
+    alignItems: "center", justifyContent: "center",
   },
   scanText: {
     fontFamily: "Inter_600SemiBold", fontSize: 15, color: DARK_GREEN,
   },
   scanSub: {
     fontFamily: "Inter_400Regular", fontSize: 12, color: "#6B7B6E",
+  },
+  detectedCard: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: "#F0FAF3",
+    borderRadius: 14, padding: 14,
+    borderWidth: 1.5, borderColor: "#30D158",
+    marginBottom: 14, gap: 12,
+  },
+  detectedAvatar: {
+    width: 44, height: 44, borderRadius: 22,
+    alignItems: "center", justifyContent: "center",
+  },
+  detectedInitials: {
+    fontFamily: "Inter_700Bold", fontSize: 16, color: "#FFF",
+  },
+  detectedInfo: { flex: 1 },
+  detectedName: {
+    fontFamily: "Inter_600SemiBold", fontSize: 15, color: DARK_GREEN,
+  },
+  detectedAccount: {
+    fontFamily: "Inter_400Regular", fontSize: 12, color: "#6B7B6E", marginTop: 2,
+  },
+  detectedBadge: { alignItems: "center", justifyContent: "center" },
+  rescanBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    alignSelf: "center", marginTop: 4, paddingVertical: 6,
+  },
+  rescanText: {
+    fontFamily: "Inter_400Regular", fontSize: 13, color: "#6B7B6E",
   },
 });
