@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,10 +17,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BankIcon } from "@/components/QuickActionIcons";
 import { formatMsisdn, pollRequestStatus, relworxApi } from "@/lib/relworx";
 import { ApiError } from "@/lib/api";
+import { setUserPhone } from "@/lib/userSession";
 
 const DARK_GREEN = "#1A3B2F";
 const LIME = "#C6F135";
 const BG = "#F2F4F2";
+
+const LOCAL_BALANCE = 209891;
 
 type SendType = "mobile" | "livra" | "bank" | "online" | null;
 
@@ -39,8 +42,8 @@ function OptionIcon({ k }: { k: SendType }) {
   return null;
 }
 
-const NETWORKS = ["MTN", "Airtel", "Glo", "9Mobile"];
-const BANKS    = ["Access Bank", "GTBank", "First Bank", "Zenith Bank", "UBA"];
+const NETWORKS = ["MTN", "Airtel"];
+const BANKS    = ["Stanbic", "Centenary", "Equity", "DFCU", "KCB"];
 
 function Field({ label, placeholder, keyboardType = "default", value, onChangeText }: {
   label: string; placeholder: string;
@@ -204,6 +207,7 @@ function FormFields({
   bank, setBank, accNum, setAccNum,
   merchant, setMerchant, amount, setAmount, note, setNote,
   hidePayment, setHidePayment,
+  recipientName, lookupBusy,
 }: {
   type: SendType;
   phone: string; setPhone: (v: string) => void;
@@ -214,12 +218,21 @@ function FormFields({
   amount: string; setAmount: (v: string) => void;
   note: string; setNote: (v: string) => void;
   hidePayment: boolean; setHidePayment: (v: boolean) => void;
+  recipientName: string; lookupBusy: boolean;
 }) {
   if (!type) return null;
   return (
     <View style={styles.formCard}>
       {type === "mobile" && <>
         <Field label="Recipient Phone" placeholder="0701 454 887" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+        {(lookupBusy || recipientName) ? (
+          <View style={fs.benRow}>
+            <Feather name={lookupBusy ? "loader" : "user-check"} size={14} color={lookupBusy ? "#6B7B6E" : DARK_GREEN} />
+            <Text style={[fs.benTxt, lookupBusy && { color: "#6B7B6E" }]}>
+              {lookupBusy ? "Verifying recipient…" : recipientName}
+            </Text>
+          </View>
+        ) : null}
         <Text style={fs.label}>Network</Text>
         <ChipRow items={NETWORKS} selected={network} onSelect={setNetwork} />
       </>}
@@ -229,7 +242,7 @@ function FormFields({
       {type === "bank" && <>
         <Text style={fs.label}>Bank</Text>
         <ChipRow items={BANKS} selected={bank} onSelect={setBank} />
-        <Field label="Account Number" placeholder="10-digit number" keyboardType="numeric" value={accNum} onChangeText={setAccNum} />
+        <Field label="Account Number" placeholder="Beneficiary account" keyboardType="numeric" value={accNum} onChangeText={setAccNum} />
       </>}
       {type === "online" && <Field label="Merchant" placeholder="e.g. Amazon, Paystack" value={merchant} onChangeText={setMerchant} />}
       {(type !== "livra" || !hidePayment) && <>
@@ -245,7 +258,6 @@ export default function SendScreen() {
   const [selected, setSelected] = useState<SendType>(null);
   const label = OPTIONS.find((o) => o.key === selected)?.label ?? "";
 
-  // Lifted form state
   const [phone, setPhone]       = useState("");
   const [network, setNetwork]   = useState("");
   const [bank, setBank]         = useState("");
@@ -255,29 +267,44 @@ export default function SendScreen() {
   const [note, setNote]         = useState("");
   const [hidePayment, setHidePayment] = useState(false);
 
-  const [sending, setSending] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(true);
-
-  async function refreshBalance() {
-    setBalanceLoading(true);
-    try {
-      const res = await relworxApi.walletBalance("UGX");
-      setWalletBalance(res.balance);
-    } catch {
-      setWalletBalance(null);
-    } finally {
-      setBalanceLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    refreshBalance();
-  }, []);
+  const [sending, setSending]               = useState(false);
+  const [recipientName, setRecipientName]   = useState("");
+  const [lookupBusy,   setLookupBusy]       = useState(false);
+  const [lastValidated, setLastValidated]   = useState("");
 
   function resetForm() {
     setPhone(""); setNetwork(""); setBank(""); setAccNum("");
     setMerchant(""); setAmount(""); setNote(""); setSelected(null);
+    setRecipientName(""); setLastValidated("");
+  }
+
+  async function maybeValidatePhone(raw: string) {
+    const msisdn = formatMsisdn(raw);
+    if (!msisdn || msisdn.replace(/\D/g, "").length < 12) return;
+    if (msisdn === lastValidated) return;
+    setLookupBusy(true);
+    try {
+      const r = await relworxApi.validatePhone(msisdn);
+      if (r.success) {
+        setRecipientName(r.customer_name || "Account verified");
+        setLastValidated(msisdn);
+      } else {
+        setRecipientName("");
+      }
+    } catch {
+      setRecipientName("");
+    } finally {
+      setLookupBusy(false);
+    }
+  }
+
+  function handlePhoneChange(v: string) {
+    setPhone(v);
+    setRecipientName("");
+    const digits = v.replace(/\D/g, "");
+    if (digits.length >= 9) {
+      maybeValidatePhone(v);
+    }
   }
 
   async function handleConfirm() {
@@ -285,8 +312,10 @@ export default function SendScreen() {
 
     if (selected !== "mobile") {
       Alert.alert(
-        "Coming soon",
-        `${label} transfers aren't available through Relworx yet. Mobile Money is fully wired.`,
+        "Use the right screen",
+        selected === "bank"
+          ? "Tap Bank Transfer on the home screen for direct bank payouts."
+          : `${label} transfers aren't wired yet.`,
       );
       return;
     }
@@ -304,27 +333,24 @@ export default function SendScreen() {
     setSending(true);
     try {
       const msisdn = formatMsisdn(phone);
-      const res = await relworxApi.sendPayment({
+      setUserPhone(msisdn).catch(() => {});
+      const res = await relworxApi.withdraw({
         msisdn,
-        currency: "UGX",
         amount: amt,
+        currency: "UGX",
         ...(note ? { description: note } : {}),
       });
-      const final = await pollRequestStatus(res.internal_reference, {
-        timeoutMs: 60000,
-      });
+      const final = await pollRequestStatus(res.internal_reference, { timeoutMs: 75000 });
       const ok = (final.status ?? "").toLowerCase() === "success";
       Alert.alert(
         ok ? "Sent" : "Pending",
         ok
           ? `UGX ${amt.toLocaleString()} sent to ${msisdn}.`
-          : final.message || "Transfer is still processing.",
+          : final.message || "Transfer is still processing — check Transactions.",
       );
       if (ok) resetForm();
-      refreshBalance();
     } catch (e) {
-      const msg =
-        e instanceof ApiError ? e.message : "Transfer failed. Please try again.";
+      const msg = e instanceof ApiError ? e.message : "Transfer failed. Please try again.";
       Alert.alert("Transfer Failed", msg);
     } finally {
       setSending(false);
@@ -337,14 +363,8 @@ export default function SendScreen() {
 
         <View style={[styles.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
           <View style={styles.topBarCenter}>
-            <Text style={styles.topBarLabel}>Relworx Wallet Balance</Text>
-            {balanceLoading ? (
-              <ActivityIndicator color="#fff" size="small" style={{ marginTop: 4 }} />
-            ) : (
-              <Text style={styles.topBarBalance}>
-                {walletBalance == null ? "UGX —" : `UGX ${walletBalance.toLocaleString()}`}
-              </Text>
-            )}
+            <Text style={styles.topBarLabel}>Your Wallet Balance</Text>
+            <Text style={styles.topBarBalance}>UGX {LOCAL_BALANCE.toLocaleString()}</Text>
           </View>
         </View>
 
@@ -380,7 +400,7 @@ export default function SendScreen() {
         >
           <FormFields
             type={selected}
-            phone={phone} setPhone={setPhone}
+            phone={phone} setPhone={handlePhoneChange}
             network={network} setNetwork={setNetwork}
             bank={bank} setBank={setBank}
             accNum={accNum} setAccNum={setAccNum}
@@ -388,6 +408,8 @@ export default function SendScreen() {
             amount={amount} setAmount={setAmount}
             note={note} setNote={setNote}
             hidePayment={hidePayment} setHidePayment={setHidePayment}
+            recipientName={recipientName}
+            lookupBusy={lookupBusy}
           />
           <View style={styles.bottomBar}>
             <TouchableOpacity
@@ -425,22 +447,9 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 28,
   },
   topBarCenter: { flex: 1, alignItems: "center" },
-  topBarLabel: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 11,
-    color: LIME,
-    marginBottom: 3,
-  },
-  topBarBalance: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 22,
-    color: "#FFFFFF",
-    letterSpacing: -0.5,
-  },
-  grid: {
-    flexDirection: "row", flexWrap: "wrap",
-    gap: 10, paddingHorizontal: 16, marginBottom: 12,
-  },
+  topBarLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: LIME, marginBottom: 3 },
+  topBarBalance: { fontFamily: "Inter_700Bold", fontSize: 22, color: "#FFFFFF", letterSpacing: -0.5 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, paddingHorizontal: 16, marginBottom: 12 },
   cell: {
     width: "47.5%", backgroundColor: "#FFF",
     borderRadius: 18, paddingVertical: 16, paddingHorizontal: 14,
@@ -456,10 +465,7 @@ const styles = StyleSheet.create({
     backgroundColor: DARK_GREEN,
     alignItems: "center", justifyContent: "center",
   },
-  cellIcon: {
-    width: 48, height: 48, borderRadius: 24,
-    alignItems: "center", justifyContent: "center",
-  },
+  cellIcon: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
   cellLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#555" },
   cellLabelActive: { color: DARK_GREEN },
   formScroll: { flex: 1 },
@@ -468,10 +474,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
   },
-  bottomBar: {
-    paddingHorizontal: 40, paddingTop: 10, paddingBottom: 12, backgroundColor: BG,
-    alignItems: "center",
-  },
+  bottomBar: { paddingHorizontal: 40, paddingTop: 10, paddingBottom: 12, backgroundColor: BG, alignItems: "center" },
   confirmBtn: {
     backgroundColor: DARK_GREEN, borderRadius: 14,
     paddingVertical: 13, paddingHorizontal: 36,
@@ -484,20 +487,14 @@ const styles = StyleSheet.create({
 
 const fs = StyleSheet.create({
   wrap: { marginBottom: 12 },
-  label: {
-    fontFamily: "Inter_500Medium", fontSize: 11, color: "#6B7B6E",
-    textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6,
-  },
+  label: { fontFamily: "Inter_500Medium", fontSize: 11, color: "#6B7B6E", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 },
   input: {
     backgroundColor: "#FFFFFF", borderRadius: 16,
     paddingHorizontal: 16, paddingVertical: 14,
     fontFamily: "Inter_400Regular", fontSize: 14, color: "#1A1A1A",
     borderWidth: 1.5, borderColor: "#C6F135",
   },
-  chip: {
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1.5, borderColor: "#D0D8D0", backgroundColor: "#FFF",
-  },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: "#D0D8D0", backgroundColor: "#FFF" },
   chipActive: { backgroundColor: DARK_GREEN, borderColor: DARK_GREEN },
   chipText: { fontFamily: "Inter_500Medium", fontSize: 12, color: DARK_GREEN },
   chipTextActive: { color: "#FFF" },
@@ -506,49 +503,24 @@ const fs = StyleSheet.create({
   hint: { fontFamily: "Inter_400Regular", fontSize: 11, marginTop: 4 },
   hintError: { color: "#FF3B30" },
   hintValid: { color: "#30D158" },
+  benRow:    { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#F0FAF0", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginTop: -8, marginBottom: 14 },
+  benTxt:    { fontFamily: "Inter_600SemiBold", fontSize: 13, color: DARK_GREEN },
   livraToggleRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
-  livraToggleBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1.5, borderColor: DARK_GREEN,
-    backgroundColor: "#FFF",
-  },
+  livraToggleBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: DARK_GREEN, backgroundColor: "#FFF" },
   livraToggleActive: { backgroundColor: DARK_GREEN, borderColor: DARK_GREEN },
   livraToggleText: { fontFamily: "Inter_500Medium", fontSize: 13, color: DARK_GREEN },
   livraToggleTextActive: { color: "#FFF" },
-  scanBox: {
-    borderWidth: 1.5, borderColor: "#C6F135", borderRadius: 16,
-    borderStyle: "dashed",
-    backgroundColor: "#F8FCF0",
-    alignItems: "center", justifyContent: "center",
-    paddingVertical: 32, gap: 10,
-  },
-  scanIconRing: {
-    width: 64, height: 64, borderRadius: 32,
-    backgroundColor: "#E8F5E3",
-    alignItems: "center", justifyContent: "center",
-  },
+  scanBox: { borderWidth: 1.5, borderColor: "#C6F135", borderRadius: 16, borderStyle: "dashed", backgroundColor: "#F8FCF0", alignItems: "center", justifyContent: "center", paddingVertical: 32, gap: 10 },
+  scanIconRing: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#E8F5E3", alignItems: "center", justifyContent: "center" },
   scanText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: DARK_GREEN },
   scanSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#6B7B6E" },
-  detectedCard: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: "#F0FAF3",
-    borderRadius: 14, padding: 14,
-    borderWidth: 1.5, borderColor: "#30D158",
-    marginBottom: 14, gap: 12,
-  },
-  detectedAvatar: {
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: "center", justifyContent: "center",
-  },
+  detectedCard: { flexDirection: "row", alignItems: "center", backgroundColor: "#F0FAF3", borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: "#30D158", marginBottom: 14, gap: 12 },
+  detectedAvatar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   detectedInitials: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#FFF" },
   detectedInfo: { flex: 1 },
   detectedName: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: DARK_GREEN },
   detectedAccount: { fontFamily: "Inter_400Regular", fontSize: 12, color: "#6B7B6E", marginTop: 2 },
   detectedBadge: { alignItems: "center", justifyContent: "center" },
-  rescanBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    alignSelf: "center", marginTop: 4, paddingVertical: 6,
-  },
+  rescanBtn: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "center", marginTop: 4, paddingVertical: 6 },
   rescanText: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#6B7B6E" },
 });

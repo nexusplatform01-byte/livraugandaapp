@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   ScrollView,
@@ -16,6 +17,9 @@ import {
 import QRCode from "react-native-qrcode-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CopyLinkIcon, GmailIcon, MessengerIcon, MoreIcon, WhatsAppIcon } from "@/components/ShareIcons";
+import { formatMsisdn, pollRequestStatus, relworxApi } from "@/lib/relworx";
+import { ApiError } from "@/lib/api";
+import { setUserPhone } from "@/lib/userSession";
 
 const DEEP  = "#1A3B2F";
 const LIME  = "#C6F135";
@@ -52,21 +56,53 @@ function MobileMoneyTab() {
   const [phone,  setPhone]  = useState("");
   const [amountFocused, setAmountFocused] = useState(false);
   const [phoneFocused,  setPhoneFocused]  = useState(false);
+  const [busy, setBusy]   = useState(false);
+  const [statusMsg, setStatusMsg] = useState("");
 
-  const handleDeposit = () => {
-    if (!amount || isNaN(Number(amount))) { Alert.alert("Invalid Amount", "Please enter a valid amount."); return; }
-    if (!phone || phone.length < 10)      { Alert.alert("Invalid Number", "Please enter a valid phone number."); return; }
-    Alert.alert("Deposit Initiated", `UGX ${Number(amount).toLocaleString()} deposit has been initiated from +256${phone}.`);
+  const handleDeposit = async () => {
+    const amt = Number((amount || "").replace(/[^0-9.]/g, ""));
+    if (!amt || amt <= 0) { Alert.alert("Invalid Amount", "Please enter a valid amount."); return; }
+    if (!phone || phone.replace(/\D/g, "").length < 9) {
+      Alert.alert("Invalid Number", "Please enter a valid mobile-money phone number.");
+      return;
+    }
+    setBusy(true);
+    setStatusMsg("Sending STK push to your phone…");
+    try {
+      const msisdn = formatMsisdn(phone);
+      setUserPhone(msisdn).catch(() => {});
+      const res = await relworxApi.deposit({
+        msisdn,
+        amount: amt,
+        currency: "UGX",
+        description: "FinWallet top-up",
+      });
+      setStatusMsg("Awaiting your mobile-money confirmation…");
+      const final = await pollRequestStatus(res.internal_reference, { timeoutMs: 75000 });
+      const ok = (final.status ?? "").toLowerCase() === "success";
+      Alert.alert(
+        ok ? "Deposit Successful" : "Pending",
+        ok
+          ? `UGX ${amt.toLocaleString()} added from ${msisdn}.`
+          : final.message || "Deposit is still processing — check Transactions.",
+      );
+      if (ok) { setAmount(""); setPhone(""); }
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : "Deposit failed. Please try again.";
+      Alert.alert("Deposit Failed", msg);
+    } finally {
+      setBusy(false);
+      setStatusMsg("");
+    }
   };
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
       <View style={s.infoBanner}>
         <Feather name="info" size={14} color={DEEP} />
-        <Text style={s.infoBannerText}>Enter your mobile money details to fund your Livra wallet instantly. The network is detected automatically.</Text>
+        <Text style={s.infoBannerText}>Enter your mobile-money details to top up your wallet. We'll send an STK prompt to your phone for confirmation.</Text>
       </View>
 
-      {/* Amount */}
       <Text style={s.fieldLabel}>Amount (UGX)</Text>
       <View style={[s.fieldBox, amountFocused && s.fieldBoxFocused]}>
         <View style={s.fieldPrefix}><Text style={s.fieldPrefixText}>UGX</Text></View>
@@ -84,28 +120,43 @@ function MobileMoneyTab() {
         />
       </View>
 
-      {/* Phone */}
       <Text style={s.fieldLabel}>Mobile Money Number</Text>
       <View style={[s.fieldBox, phoneFocused && s.fieldBoxFocused]}>
-        <View style={s.dialCode}><Text style={s.dialCodeText}>🇳🇬 +234</Text></View>
+        <View style={s.dialCode}><Text style={s.dialCodeText}>🇺🇬 +256</Text></View>
         <TextInput
           style={s.fieldInput}
-          placeholder="080 0000 0000"
+          placeholder="0701 454 887"
           placeholderTextColor="#AABFAA"
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
           onFocus={() => setPhoneFocused(true)}
           onBlur={() => setPhoneFocused(false)}
-          maxLength={11}
+          maxLength={13}
           selectionColor={DEEP}
           contextMenuHidden
         />
       </View>
 
-      <TouchableOpacity style={s.primaryBtn} onPress={handleDeposit} activeOpacity={0.85}>
-        <Feather name="arrow-down-circle" size={18} color={LIME} />
-        <Text style={s.primaryBtnText}>Deposit via Mobile Money</Text>
+      {statusMsg ? (
+        <View style={s.statusBox}>
+          <ActivityIndicator color={DEEP} size="small" />
+          <Text style={s.statusTxt}>{statusMsg}</Text>
+        </View>
+      ) : null}
+
+      <TouchableOpacity
+        style={[s.primaryBtn, busy && { opacity: 0.6 }]}
+        onPress={busy ? undefined : handleDeposit}
+        activeOpacity={busy ? 1 : 0.85}
+        disabled={busy}
+      >
+        {busy ? <ActivityIndicator color={LIME} /> : (
+          <>
+            <Feather name="arrow-down-circle" size={18} color={LIME} />
+            <Text style={s.primaryBtnText}>Deposit via Mobile Money</Text>
+          </>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -285,6 +336,8 @@ const s = StyleSheet.create({
 
   primaryBtn:     { backgroundColor: DEEP, borderRadius: 16, paddingVertical: 17, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginTop: 6 },
   primaryBtnText: { color: LIME, fontSize: 15, fontFamily: "Inter_700Bold" },
+  statusBox:      { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F0F4F0", borderRadius: 12, padding: 12, marginBottom: 12 },
+  statusTxt:      { flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, color: DEEP },
 
   // QR tab
   qrCard:       { backgroundColor: CARD, borderRadius: 20, overflow: "hidden", marginBottom: 14, borderWidth: 1, borderColor: BORDER },

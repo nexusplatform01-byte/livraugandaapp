@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -15,8 +15,15 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { AppTabBar } from "@/components/AppTabBar";
+import { BANK_TRANSFER_CODES } from "@/lib/productCodes";
+import {
+  formatMsisdn,
+  pollRequestStatus,
+  relworxApi,
+} from "@/lib/relworx";
+import { ApiError } from "@/lib/api";
+import { setUserPhone } from "@/lib/userSession";
 
-// ─── Theme ──────────────────────────────────────────────────────────────────
 const DARK_GREEN = "#1A3B2F";
 const LIME       = "#C6F135";
 const BG         = "#F5F7F5";
@@ -26,39 +33,43 @@ const TEXT       = "#1A3B2F";
 const MUTED      = "#7A9A7A";
 const SEP        = "#F0F4F0";
 
-// ─── Ugandan Banks ────────────────────────────────────────────────────────────
+const LOCAL_BALANCE = 209891;
+
 interface Bank {
   id: string;
   name: string;
   initials: string;
   color: string;
+  productCode: string;
 }
 
 const BANKS: Bank[] = [
-  { id: "stanbic",    name: "Stanbic Bank",       initials: "STB", color: "#003A7A" },
-  { id: "absa",       name: "Absa Bank",           initials: "ABS", color: "#CC0000" },
-  { id: "centenary",  name: "Centenary Bank",      initials: "CEN", color: "#005500" },
-  { id: "dfcu",       name: "DFCU Bank",           initials: "DFC", color: "#FF6600" },
-  { id: "equity",     name: "Equity Bank",         initials: "EQB", color: "#CC0000" },
-  { id: "housing",    name: "Housing Finance",     initials: "HFB", color: "#003366" },
-  { id: "kcb",        name: "KCB Bank",            initials: "KCB", color: "#006633" },
-  { id: "ncba",       name: "NCBA Bank",           initials: "NCB", color: "#1A1A1A" },
-  { id: "postbank",   name: "PostBank Uganda",     initials: "PBU", color: "#CC6600" },
-  { id: "pride",      name: "Pride Microfinance",  initials: "PMF", color: "#660099" },
-  { id: "tropical",   name: "Tropical Bank",       initials: "TRB", color: "#006699" },
-  { id: "uba",        name: "UBA Uganda",          initials: "UBA", color: "#CC0033" },
-  { id: "oci",        name: "Orient Bank",         initials: "ORI", color: "#993300" },
+  { id: "stanbic",     name: "Stanbic Bank",                 initials: "STB", color: "#003A7A", productCode: BANK_TRANSFER_CODES.stanbic },
+  { id: "absa",        name: "Absa Bank",                    initials: "ABS", color: "#CC0000", productCode: BANK_TRANSFER_CODES.absa },
+  { id: "centenary",   name: "Centenary Bank",               initials: "CEN", color: "#005500", productCode: BANK_TRANSFER_CODES.centenary },
+  { id: "dfcu",        name: "DFCU Bank",                    initials: "DFC", color: "#FF6600", productCode: BANK_TRANSFER_CODES.dfcu },
+  { id: "equity",      name: "Equity Bank",                  initials: "EQB", color: "#CC0000", productCode: BANK_TRANSFER_CODES.equity },
+  { id: "housing",     name: "Housing Finance",              initials: "HFB", color: "#003366", productCode: BANK_TRANSFER_CODES.housing },
+  { id: "kcb",         name: "KCB Bank",                     initials: "KCB", color: "#006633", productCode: BANK_TRANSFER_CODES.kcb },
+  { id: "ncba",        name: "NCBA Bank",                    initials: "NCB", color: "#1A1A1A", productCode: BANK_TRANSFER_CODES.ncba },
+  { id: "postbank",    name: "PostBank Uganda",              initials: "PBU", color: "#CC6600", productCode: BANK_TRANSFER_CODES.postbank },
+  { id: "tropical",    name: "Tropical Bank",                initials: "TRB", color: "#006699", productCode: BANK_TRANSFER_CODES.tropical },
+  { id: "uba",         name: "UBA Uganda",                   initials: "UBA", color: "#CC0033", productCode: BANK_TRANSFER_CODES.uba },
+  { id: "diamond",     name: "Diamond Trust Bank",           initials: "DTB", color: "#1A4D8C", productCode: BANK_TRANSFER_CODES.diamond },
+  { id: "ecobank",     name: "EcoBank Uganda",               initials: "ECO", color: "#0061A1", productCode: BANK_TRANSFER_CODES.ecobank },
+  { id: "exim",        name: "Exim Bank Uganda",             initials: "EXM", color: "#CC9900", productCode: BANK_TRANSFER_CODES.exim },
+  { id: "africa",      name: "Bank of Africa",               initials: "BOA", color: "#0033CC", productCode: BANK_TRANSFER_CODES.africa },
+  { id: "baroda",      name: "Bank of Baroda",               initials: "BOB", color: "#FF6600", productCode: BANK_TRANSFER_CODES.baroda },
+  { id: "india",       name: "Bank of India",                initials: "BOI", color: "#003399", productCode: BANK_TRANSFER_CODES.india },
+  { id: "citi",        name: "Citibank Uganda",              initials: "CIT", color: "#003A7A", productCode: BANK_TRANSFER_CODES.citi },
+  { id: "guaranty",    name: "Guaranty Trust Bank",          initials: "GTB", color: "#FF6600", productCode: BANK_TRANSFER_CODES.guaranty },
+  { id: "abc",         name: "ABC Capital Bank",             initials: "ABC", color: "#1A1A1A", productCode: BANK_TRANSFER_CODES.abc },
+  { id: "cairo",       name: "Cairo International Bank",     initials: "CIB", color: "#993300", productCode: BANK_TRANSFER_CODES.cairo },
+  { id: "opportunity", name: "Opportunity Bank",             initials: "OPP", color: "#0099CC", productCode: BANK_TRANSFER_CODES.opportunity },
+  { id: "topfinance",  name: "Top Finance Bank",             initials: "TFB", color: "#660099", productCode: BANK_TRANSFER_CODES.topfinance },
+  { id: "standard",    name: "Standard Chartered Bank",      initials: "SCB", color: "#003366", productCode: BANK_TRANSFER_CODES.standard },
 ];
 
-// ─── Mock beneficiary lookup ──────────────────────────────────────────────────
-const MOCK_LOOKUP: Record<string, string> = {
-  "1234567890": "Darlington Emeka",
-  "0987654321": "Amina Nakato",
-  "1122334455": "Joseph Ssebuwufu",
-  "9876543210": "Grace Auma",
-};
-
-// ─── Bank Selector Modal ──────────────────────────────────────────────────────
 function BankSelector({
   visible, selected, onSelect, onClose,
 }: {
@@ -97,20 +108,21 @@ function BankSelector({
   );
 }
 
-// ─── Confirm Sheet ────────────────────────────────────────────────────────────
 function ConfirmSheet({
-  visible, bank, accountNo, beneficiary, amount, note, onConfirm, onCancel,
+  visible, bank, accountNo, depositorName, payerPhone, amount, note,
+  loading, statusMessage, onConfirm, onCancel,
 }: {
-  visible: boolean; bank: Bank | null; accountNo: string;
-  beneficiary: string; amount: string; note: string;
+  visible: boolean; bank: Bank | null; accountNo: string; depositorName: string;
+  payerPhone: string; amount: string; note: string;
+  loading: boolean; statusMessage: string;
   onConfirm: () => void; onCancel: () => void;
 }) {
   const insets = useSafeAreaInsets();
   if (!bank || !visible) return null;
   const num = Number(amount.replace(/,/g, ""));
   return (
-    <View style={[cs.overlay]} pointerEvents="auto">
-      <Pressable style={cs.backdrop} onPress={onCancel} />
+    <View style={cs.overlay} pointerEvents="auto">
+      <Pressable style={cs.backdrop} onPress={loading ? undefined : onCancel} />
       <View style={[cs.sheet, { paddingBottom: insets.bottom + 24 }]}>
         <View style={cs.handle} />
         <Text style={cs.title}>Confirm Transfer</Text>
@@ -119,18 +131,14 @@ function ConfirmSheet({
             <Text style={cs.bankBadgeTxt}>{bank.initials}</Text>
           </View>
           <View style={cs.summaryInfo}>
-            <Text style={cs.summaryName}>{beneficiary || "Account Holder"}</Text>
+            <Text style={cs.summaryName}>{depositorName || "Bank Beneficiary"}</Text>
             <Text style={cs.summaryDesc}>{bank.name}</Text>
             <Text style={cs.summaryAcct}>{accountNo}</Text>
           </View>
         </View>
         <View style={cs.detailRow}>
-          <Text style={cs.detailLabel}>Bank</Text>
-          <Text style={cs.detailVal}>{bank.name}</Text>
-        </View>
-        <View style={cs.detailRow}>
-          <Text style={cs.detailLabel}>Account Number</Text>
-          <Text style={cs.detailVal}>{accountNo}</Text>
+          <Text style={cs.detailLabel}>Pay From (MM)</Text>
+          <Text style={cs.detailVal}>{payerPhone || "—"}</Text>
         </View>
         {note ? (
           <View style={cs.detailRow}>
@@ -142,80 +150,121 @@ function ConfirmSheet({
           <Text style={cs.detailLabel}>Amount</Text>
           <Text style={cs.detailAmt}>UGX {num.toLocaleString()}</Text>
         </View>
-        <TouchableOpacity style={cs.confirmBtn} onPress={onConfirm} activeOpacity={0.85}>
-          <Text style={cs.confirmBtnTxt}>Send UGX {num.toLocaleString()}</Text>
+        {statusMessage ? (
+          <View style={cs.statusBox}>
+            {loading && <ActivityIndicator color={DARK_GREEN} size="small" />}
+            <Text style={cs.statusTxt}>{statusMessage}</Text>
+          </View>
+        ) : null}
+        <TouchableOpacity
+          style={[cs.confirmBtn, loading && cs.confirmBtnDim]}
+          onPress={loading ? undefined : onConfirm}
+          activeOpacity={loading ? 1 : 0.85}
+          disabled={loading}
+        >
+          {loading ? <ActivityIndicator color={DARK_GREEN} /> : (
+            <Text style={cs.confirmBtnTxt}>Send UGX {num.toLocaleString()}</Text>
+          )}
         </TouchableOpacity>
-        <TouchableOpacity style={cs.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
-          <Text style={cs.cancelBtnTxt}>Cancel</Text>
+        <TouchableOpacity
+          style={cs.cancelBtn}
+          onPress={loading ? undefined : onCancel}
+          activeOpacity={0.7}
+          disabled={loading}
+        >
+          <Text style={cs.cancelBtnTxt}>{loading ? "Please wait…" : "Cancel"}</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
-const INITIAL_BALANCE = 209891;
-
 export default function BankScreen() {
   const insets = useSafeAreaInsets();
-  const [balance,       setBalance]       = useState(INITIAL_BALANCE);
   const [selectedBank,  setSelectedBank]  = useState<Bank | null>(null);
   const [bankModalOpen, setBankModalOpen] = useState(false);
   const [accountNo,     setAccountNo]     = useState("");
-  const [beneficiary,   setBeneficiary]   = useState("");
-  const [lookingUp,     setLookingUp]     = useState(false);
+  const [depositorName, setDepositorName] = useState("");
+  const [payerPhone,    setPayerPhone]    = useState("");
   const [amount,        setAmount]        = useState("");
   const [note,          setNote]          = useState("");
   const [sheetOpen,     setSheetOpen]     = useState(false);
+  const [loading,       setLoading]       = useState(false);
+  const [statusMsg,     setStatusMsg]     = useState("");
+  const [errorMsg,      setErrorMsg]      = useState("");
   const [successMsg,    setSuccessMsg]    = useState("");
 
-  function handleAccountNoBlur() {
-    if (accountNo.length >= 10) {
-      setLookingUp(true);
-      setTimeout(() => {
-        setBeneficiary(MOCK_LOOKUP[accountNo] ?? "Account Verified");
-        setLookingUp(false);
-      }, 800);
-    } else {
-      setBeneficiary("");
+  function openConfirm() {
+    if (!selectedBank)         { setErrorMsg("Please select a bank."); return; }
+    if (accountNo.length < 6)  { setErrorMsg("Enter a valid account number."); return; }
+    if (!depositorName.trim()) { setErrorMsg("Enter the beneficiary / depositor name."); return; }
+    if (!payerPhone || payerPhone.replace(/\D/g, "").length < 9) {
+      setErrorMsg("Enter the mobile-money phone you'll pay with.");
+      return;
     }
-  }
-
-  function handleTransfer() {
-    if (!selectedBank)             { Alert.alert("Select Bank", "Please select a bank"); return; }
-    if (accountNo.length < 10)     { Alert.alert("Invalid Account", "Enter a valid 10-digit account number"); return; }
-    if (!amount || Number(amount.replace(/,/g, "")) <= 0) { Alert.alert("Invalid Amount", "Enter a valid transfer amount"); return; }
     const num = Number(amount.replace(/,/g, ""));
-    if (num > balance)             { Alert.alert("Insufficient Funds", "You don't have enough balance for this transfer"); return; }
+    if (!num || num <= 0)      { setErrorMsg("Enter a valid transfer amount."); return; }
+    setErrorMsg("");
+    setStatusMsg("");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSheetOpen(true);
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
+    if (!selectedBank || loading) return;
     const num = Number(amount.replace(/,/g, ""));
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setBalance((b) => b - num);
-    setSuccessMsg(`UGX ${num.toLocaleString()} sent to ${beneficiary || accountNo} at ${selectedBank?.name}`);
-    setSheetOpen(false);
-    setAccountNo("");
-    setBeneficiary("");
-    setAmount("");
-    setNote("");
-    setSelectedBank(null);
+    const msisdn = formatMsisdn(payerPhone);
+    setUserPhone(msisdn).catch(() => {});
+    setLoading(true);
+    setStatusMsg("Validating transfer…");
+    try {
+      const v = await relworxApi.validateProduct({
+        msisdn,
+        amount: num,
+        product_code: selectedBank.productCode,
+        contact_phone: msisdn,
+        account_number: accountNo,
+        depositor_name: depositorName,
+        beneficiary_name: depositorName,
+        account_name: depositorName,
+        description: note || `Bank transfer to ${selectedBank.name}`,
+      });
+      setStatusMsg("Sending mobile-money request…");
+      const p = await relworxApi.purchaseProduct(v.validation_reference);
+      setStatusMsg("Awaiting your mobile-money confirmation…");
+      const final = await pollRequestStatus(p.internal_reference, { timeoutMs: 90000 });
+      const ok = (final.status ?? "").toLowerCase() === "success";
+      if (ok) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setSuccessMsg(`UGX ${num.toLocaleString()} sent to ${depositorName} at ${selectedBank.name}.`);
+        setSheetOpen(false);
+        setAccountNo(""); setDepositorName(""); setAmount(""); setNote("");
+        setStatusMsg("");
+      } else {
+        setStatusMsg(final.message || "Still processing — check Transactions.");
+      }
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : "Transfer failed. Please try again.";
+      setErrorMsg(msg);
+      setStatusMsg("");
+      setSheetOpen(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const canTransfer = !!selectedBank && accountNo.length >= 10 && Number(amount.replace(/,/g, "")) > 0;
+  const canTransfer = !!selectedBank && accountNo.length >= 6 && !!depositorName && !!payerPhone && Number(amount.replace(/,/g, "")) > 0;
 
   return (
     <View style={s.root}>
-      {/* ── Balance Header ── */}
       <View style={[s.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Feather name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={s.topBarCenter}>
           <Text style={s.topBarLabel}>Your Wallet Balance</Text>
-          <Text style={s.topBarBalance}>UGX {balance.toLocaleString()}</Text>
+          <Text style={s.topBarBalance}>UGX {LOCAL_BALANCE.toLocaleString()}</Text>
         </View>
         <View style={{ width: 38 }} />
       </View>
@@ -226,7 +275,6 @@ export default function BankScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Success Banner ── */}
         {!!successMsg && (
           <View style={s.successBanner}>
             <Feather name="check-circle" size={16} color={DARK_GREEN} />
@@ -236,12 +284,20 @@ export default function BankScreen() {
             </TouchableOpacity>
           </View>
         )}
+        {!!errorMsg && (
+          <View style={s.errorBanner}>
+            <Feather name="alert-circle" size={16} color="#7A1A1A" />
+            <Text style={s.errorTxt}>{errorMsg}</Text>
+            <TouchableOpacity onPress={() => setErrorMsg("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={14} color="#7A1A1A" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={s.formCard}>
           <Text style={s.formTitle}>Bank Transfer</Text>
-          <Text style={s.formSubtitle}>Transfer funds directly to any Ugandan bank account</Text>
+          <Text style={s.formSubtitle}>Send to any Ugandan bank account via mobile-money.</Text>
 
-          {/* ── Bank Selection ── */}
           <Text style={s.fieldLabel}>Select Bank</Text>
           <TouchableOpacity
             style={[s.bankPickerBtn, selectedBank && s.bankPickerBtnSelected]}
@@ -261,32 +317,38 @@ export default function BankScreen() {
             <Feather name="chevron-down" size={18} color={MUTED} />
           </TouchableOpacity>
 
-          {/* ── Account Number ── */}
           <Text style={s.fieldLabel}>Account Number</Text>
           <TextInput
             style={s.input}
-            placeholder="10-digit account number"
+            placeholder="Beneficiary account number"
             placeholderTextColor={MUTED}
             value={accountNo}
-            onChangeText={(t) => { setAccountNo(t); setBeneficiary(""); }}
-            onBlur={handleAccountNoBlur}
+            onChangeText={setAccountNo}
             keyboardType="number-pad"
-            maxLength={10}
-            contextMenuHidden
             selectionColor={LIME}
           />
 
-          {/* ── Beneficiary Name ── */}
-          {(lookingUp || beneficiary) ? (
-            <View style={s.beneficiaryRow}>
-              <Feather name={lookingUp ? "loader" : "user-check"} size={14} color={lookingUp ? MUTED : DARK_GREEN} />
-              <Text style={[s.beneficiaryTxt, lookingUp && { color: MUTED }]}>
-                {lookingUp ? "Verifying account..." : beneficiary}
-              </Text>
-            </View>
-          ) : null}
+          <Text style={s.fieldLabel}>Beneficiary / Depositor Name</Text>
+          <TextInput
+            style={s.input}
+            placeholder="Full name on the account"
+            placeholderTextColor={MUTED}
+            value={depositorName}
+            onChangeText={setDepositorName}
+            selectionColor={LIME}
+          />
 
-          {/* ── Amount ── */}
+          <Text style={s.fieldLabel}>Mobile-Money Phone (Payer)</Text>
+          <TextInput
+            style={s.input}
+            placeholder="0701 454 887"
+            placeholderTextColor={MUTED}
+            value={payerPhone}
+            onChangeText={setPayerPhone}
+            keyboardType="phone-pad"
+            selectionColor={LIME}
+          />
+
           <Text style={s.fieldLabel}>Amount (UGX)</Text>
           <View style={s.amountRow}>
             <View style={s.amountPrefix}>
@@ -299,12 +361,10 @@ export default function BankScreen() {
               value={amount}
               onChangeText={setAmount}
               keyboardType="numeric"
-              contextMenuHidden
               selectionColor={LIME}
             />
           </View>
 
-          {/* ── Quick Amount Pills ── */}
           <View style={s.quickAmts}>
             {["10,000", "50,000", "100,000", "200,000"].map((v) => (
               <TouchableOpacity
@@ -318,7 +378,6 @@ export default function BankScreen() {
             ))}
           </View>
 
-          {/* ── Note ── */}
           <Text style={s.fieldLabel}>Note (optional)</Text>
           <TextInput
             style={s.input}
@@ -329,73 +388,45 @@ export default function BankScreen() {
             selectionColor={LIME}
           />
         </View>
-
-        {/* ── Recent Recipients ── */}
-        <View style={s.recentCard}>
-          <Text style={s.recentTitle}>Recent Recipients</Text>
-          {[
-            { name: "Amina Nakato",      bank: "Stanbic Bank",   acct: "•••• 4321", color: "#003A7A", initials: "STB" },
-            { name: "Joseph Ssebuwufu", bank: "Centenary Bank", acct: "•••• 3344", color: "#005500", initials: "CEN" },
-            { name: "Grace Auma",        bank: "Equity Bank",    acct: "•••• 3210", color: "#CC0000", initials: "EQB" },
-          ].map((r, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[s.recentRow, i < 2 && s.recentRowBorder]}
-              onPress={() => { Haptics.selectionAsync(); setAccountNo(r.acct.replace("•••• ", "")); setBeneficiary(r.name); }}
-              activeOpacity={0.7}
-            >
-              <View style={[s.recentLogo, { backgroundColor: r.color }]}>
-                <Text style={s.recentInitials}>{r.initials}</Text>
-              </View>
-              <View style={s.recentInfo}>
-                <Text style={s.recentName}>{r.name}</Text>
-                <Text style={s.recentBank}>{r.bank} · {r.acct}</Text>
-              </View>
-              <Feather name="chevron-right" size={16} color={MUTED} />
-            </TouchableOpacity>
-          ))}
-        </View>
       </ScrollView>
 
-      {/* ── Transfer Button ── */}
       <View style={[s.footer, { paddingBottom: 0 }]}>
         <TouchableOpacity
           style={[s.transferBtn, !canTransfer && s.transferBtnDim]}
-          onPress={handleTransfer}
+          onPress={openConfirm}
           activeOpacity={0.85}
         >
           <Feather name="send" size={16} color={DARK_GREEN} style={{ marginRight: 8 }} />
           <Text style={s.transferBtnTxt}>
-            {amount ? `Send UGX ${Number(amount.replace(/,/g, "")).toLocaleString()}` : "Send Money"}
+            {amount ? `Send UGX ${Number((amount || "0").replace(/,/g, "")).toLocaleString()}` : "Send Money"}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Modals */}
       <BankSelector
         visible={bankModalOpen}
         selected={selectedBank}
         onSelect={setSelectedBank}
         onClose={() => setBankModalOpen(false)}
       />
-      {sheetOpen && (
-        <ConfirmSheet
-          visible={sheetOpen}
-          bank={selectedBank}
-          accountNo={accountNo}
-          beneficiary={beneficiary}
-          amount={amount}
-          note={note}
-          onConfirm={handleConfirm}
-          onCancel={() => setSheetOpen(false)}
-        />
-      )}
+      <ConfirmSheet
+        visible={sheetOpen}
+        bank={selectedBank}
+        accountNo={accountNo}
+        depositorName={depositorName}
+        payerPhone={payerPhone ? formatMsisdn(payerPhone) : ""}
+        amount={amount}
+        note={note}
+        loading={loading}
+        statusMessage={statusMsg}
+        onConfirm={handleConfirm}
+        onCancel={() => { setSheetOpen(false); setStatusMsg(""); }}
+      />
       <AppTabBar activeTab="" />
     </View>
   );
 }
 
-// ─── Bank Selector Styles ─────────────────────────────────────────────────────
 const bs = StyleSheet.create({
   overlay:      { ...StyleSheet.absoluteFillObject, zIndex: 99, justifyContent: "flex-end" },
   backdrop:     { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
@@ -410,7 +441,6 @@ const bs = StyleSheet.create({
   bankNameActive:{ fontFamily: "Inter_600SemiBold", color: DARK_GREEN },
 });
 
-// ─── Confirm Sheet Styles ─────────────────────────────────────────────────────
 const cs = StyleSheet.create({
   overlay:   { ...StyleSheet.absoluteFillObject, zIndex: 99, justifyContent: "flex-end" },
   backdrop:  { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
@@ -430,12 +460,14 @@ const cs = StyleSheet.create({
   detailVal:     { fontFamily: "Inter_500Medium", fontSize: 13, color: TEXT },
   detailAmt:     { fontFamily: "Inter_700Bold", fontSize: 16, color: DARK_GREEN },
   confirmBtn:    { backgroundColor: LIME, borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 10 },
+  confirmBtnDim: { opacity: 0.6 },
   confirmBtnTxt: { fontFamily: "Inter_700Bold", fontSize: 16, color: DARK_GREEN },
   cancelBtn:     { paddingVertical: 12, alignItems: "center" },
   cancelBtnTxt:  { fontFamily: "Inter_500Medium", fontSize: 14, color: MUTED },
+  statusBox:     { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F0F4F0", borderRadius: 12, padding: 12, marginBottom: 12 },
+  statusTxt:     { flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, color: DARK_GREEN },
 });
 
-// ─── Screen Styles ────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   root:         { flex: 1, backgroundColor: BG },
   topBar:       { backgroundColor: DARK_GREEN, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
@@ -446,6 +478,8 @@ const s = StyleSheet.create({
   scroll:        { flex: 1 },
   successBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#DCF8E6", borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 12 },
   successTxt:    { flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, color: DARK_GREEN },
+  errorBanner:   { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FCE8E6", borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 12 },
+  errorTxt:      { flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, color: "#7A1A1A" },
   formCard:      { backgroundColor: CARD, borderRadius: 20, marginHorizontal: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: BORDER },
   formTitle:     { fontFamily: "Inter_700Bold", fontSize: 18, color: TEXT, marginBottom: 4 },
   formSubtitle:  { fontFamily: "Inter_400Regular", fontSize: 12, color: MUTED, marginBottom: 20 },
@@ -458,8 +492,6 @@ const s = StyleSheet.create({
   bankPickerInitials:    { fontFamily: "Inter_700Bold", fontSize: 10, color: "#fff" },
   bankPickerName:        { fontFamily: "Inter_600SemiBold", fontSize: 14, color: TEXT },
   bankPickerPlaceholder: { fontFamily: "Inter_400Regular", fontSize: 14, color: MUTED, flex: 1 },
-  beneficiaryRow:{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#F0FAF0", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginTop: -8, marginBottom: 14 },
-  beneficiaryTxt:{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: DARK_GREEN },
   amountRow:     { flexDirection: "row", alignItems: "center", backgroundColor: BG, borderWidth: 1.5, borderColor: BORDER, borderRadius: 12, marginBottom: 10, overflow: "hidden" },
   amountPrefix:  { backgroundColor: SEP, paddingHorizontal: 14, paddingVertical: 13, borderRightWidth: 1, borderRightColor: BORDER },
   amountPrefixTxt:{ fontFamily: "Inter_600SemiBold", fontSize: 14, color: MUTED },
@@ -469,17 +501,8 @@ const s = StyleSheet.create({
   quickAmtActive:{ backgroundColor: LIME, borderColor: LIME },
   quickAmtTxt:   { fontFamily: "Inter_500Medium", fontSize: 12, color: MUTED },
   quickAmtTxtActive:{ color: DARK_GREEN, fontFamily: "Inter_600SemiBold" },
-  recentCard:    { backgroundColor: CARD, borderRadius: 20, marginHorizontal: 16, padding: 20, borderWidth: 1, borderColor: BORDER, marginBottom: 16 },
-  recentTitle:   { fontFamily: "Inter_600SemiBold", fontSize: 14, color: TEXT, marginBottom: 12 },
-  recentRow:     { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12 },
-  recentRowBorder:{ borderBottomWidth: 1, borderBottomColor: SEP },
-  recentLogo:    { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
-  recentInitials:{ fontFamily: "Inter_700Bold", fontSize: 11, color: "#fff" },
-  recentInfo:    { flex: 1 },
-  recentName:    { fontFamily: "Inter_600SemiBold", fontSize: 13, color: TEXT },
-  recentBank:    { fontFamily: "Inter_400Regular", fontSize: 11, color: MUTED, marginTop: 2 },
-  footer:        { paddingHorizontal: 16, paddingTop: 12, backgroundColor: CARD, borderTopWidth: 1, borderTopColor: BORDER },
-  transferBtn:    { backgroundColor: LIME, borderRadius: 16, paddingVertical: 16, alignItems: "center", flexDirection: "row", justifyContent: "center" },
-  transferBtnDim: { opacity: 0.5 },
-  transferBtnTxt: { fontFamily: "Inter_700Bold", fontSize: 16, color: DARK_GREEN },
+  footer:        { backgroundColor: CARD, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14, borderTopWidth: 1, borderTopColor: BORDER },
+  transferBtn:   { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: LIME, borderRadius: 16, paddingVertical: 16 },
+  transferBtnDim:{ opacity: 0.5 },
+  transferBtnTxt:{ fontFamily: "Inter_700Bold", fontSize: 15, color: DARK_GREEN },
 });

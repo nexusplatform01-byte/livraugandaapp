@@ -20,11 +20,12 @@ import {
   pollRequestStatus,
   relworxApi,
   type ChoiceListItem,
+  type PriceListItem,
 } from "@/lib/relworx";
 import { ApiError } from "@/lib/api";
-import { PAY_PRODUCT_CODES, requiresLocation } from "@/lib/productCodes";
+import { TV_CODES, UTILITY_CODES, requiresLocation } from "@/lib/productCodes";
+import { setUserPhone } from "@/lib/userSession";
 
-// ─── Theme ──────────────────────────────────────────────────────────────────
 const DARK_GREEN = "#1A3B2F";
 const LIME       = "#C6F135";
 const BG         = "#F5F7F5";
@@ -34,153 +35,75 @@ const TEXT       = "#1A3B2F";
 const MUTED      = "#7A9A7A";
 const SEP        = "#F0F4F0";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-type CatKey = "tv" | "electricity" | "water";
+const LOCAL_BALANCE = 209891;
 
-interface Plan {
-  id: string;
-  name: string;
-  amount: number;
-  validity?: string;
-  description?: string;
-}
+type CatKey = "tv" | "electricity" | "water";
 
 interface Provider {
   id: string;
   name: string;
   initials: string;
   color: string;
+  productCode: string;
   inputLabel: string;
   inputPlaceholder: string;
-  plans: Plan[];
+  /** Field name for the customer reference passed to /api/products/validate */
+  refField: "account_no" | "meter_number";
+  hasPriceList: boolean;
 }
 
-// ─── Categories ──────────────────────────────────────────────────────────────
 const CATS: { key: CatKey; label: string; icon: string }[] = [
-  { key: "tv",          label: "TV / Cable",   icon: "tv"   },
-  { key: "electricity", label: "Electricity",  icon: "zap"  },
-  { key: "water",       label: "Water",        icon: "droplet" },
+  { key: "tv",          label: "TV / Cable",  icon: "tv" },
+  { key: "electricity", label: "Electricity", icon: "zap" },
+  { key: "water",       label: "Water",       icon: "droplet" },
 ];
 
-// ─── Providers Data ───────────────────────────────────────────────────────────
 const PROVIDERS: Record<CatKey, Provider[]> = {
   tv: [
-    {
-      id: "dstv", name: "DStv", initials: "DST", color: "#0055AA",
-      inputLabel: "Smart Card Number", inputPlaceholder: "Enter smart card number",
-      plans: [
-        { id: "t1", name: "Padi",     amount: 15000,  validity: "1 month", description: "Local & African channels" },
-        { id: "t2", name: "Yanga",    amount: 22000,  validity: "1 month", description: "More local content" },
-        { id: "t3", name: "Confam",   amount: 31000,  validity: "1 month", description: "African content + news" },
-        { id: "t4", name: "Compact",  amount: 55000,  validity: "1 month", description: "International channels" },
-        { id: "t5", name: "Compact+", amount: 87000,  validity: "1 month", description: "Sports & premium content" },
-        { id: "t6", name: "Premium",  amount: 151000, validity: "1 month", description: "All channels included" },
-      ],
-    },
-    {
-      id: "gotv", name: "GOtv", initials: "GOT", color: "#0088DD",
-      inputLabel: "IUC Number", inputPlaceholder: "Enter IUC number",
-      plans: [
-        { id: "t1", name: "Lite",   amount: 5500,  validity: "1 month", description: "Basic channels" },
-        { id: "t2", name: "Jinja",  amount: 18000, validity: "1 month", description: "Entertainment channels" },
-        { id: "t3", name: "Jolli",  amount: 30000, validity: "1 month", description: "Sports included" },
-        { id: "t4", name: "Supa",   amount: 44000, validity: "1 month", description: "Premium channels" },
-        { id: "t5", name: "Supa+",  amount: 58500, validity: "1 month", description: "All GOtv channels" },
-      ],
-    },
-    {
-      id: "startimes", name: "StarTimes", initials: "STR", color: "#AA0000",
-      inputLabel: "Smart Card Number", inputPlaceholder: "Enter smart card number",
-      plans: [
-        { id: "t1", name: "Nova",    amount: 5500,  validity: "1 month", description: "Local channels" },
-        { id: "t2", name: "Basic",   amount: 10500, validity: "1 month", description: "More channels" },
-        { id: "t3", name: "Smart",   amount: 13500, validity: "1 month", description: "Bollywood + local" },
-        { id: "t4", name: "Classic", amount: 15500, validity: "1 month", description: "Sports + movies" },
-        { id: "t5", name: "Super",   amount: 23500, validity: "1 month", description: "All channels" },
-      ],
-    },
-    {
-      id: "showmax", name: "Showmax", initials: "SHO", color: "#7B0000",
-      inputLabel: "Email Address", inputPlaceholder: "Enter email address",
-      plans: [
-        { id: "t1", name: "Mobile",            amount: 7500,  validity: "1 month", description: "Mobile only" },
-        { id: "t2", name: "Standard",          amount: 17500, validity: "1 month", description: "Any device" },
-        { id: "t3", name: "Standard + Sports", amount: 26500, validity: "1 month", description: "All content + Live sports" },
-      ],
-    },
+    { id: "dstv",        name: "DStv",        initials: "DST", color: "#0055AA",
+      productCode: TV_CODES.dstv,        inputLabel: "Smart Card Number", inputPlaceholder: "Enter smart card number",
+      refField: "account_no", hasPriceList: true },
+    { id: "gotv",        name: "GOtv",        initials: "GOT", color: "#0088DD",
+      productCode: TV_CODES.gotv,        inputLabel: "IUC Number",        inputPlaceholder: "Enter IUC number",
+      refField: "account_no", hasPriceList: true },
+    { id: "startimes",   name: "StarTimes",   initials: "STR", color: "#AA0000",
+      productCode: TV_CODES.startimes,   inputLabel: "Smart Card Number", inputPlaceholder: "Enter smart card number",
+      refField: "account_no", hasPriceList: true },
+    { id: "azam",        name: "Azam TV",     initials: "AZM", color: "#005588",
+      productCode: TV_CODES.azam,        inputLabel: "Smart Card Number", inputPlaceholder: "Enter smart card number",
+      refField: "account_no", hasPriceList: true },
+    { id: "multichoice", name: "Multichoice", initials: "MUL", color: "#222222",
+      productCode: TV_CODES.multichoice, inputLabel: "Smart Card / IUC",  inputPlaceholder: "Enter card / IUC number",
+      refField: "account_no", hasPriceList: true },
   ],
   electricity: [
-    {
-      id: "umeme", name: "UMEME", initials: "UME", color: "#FF6600",
-      inputLabel: "Meter Number", inputPlaceholder: "Enter meter number",
-      plans: [
-        { id: "e1", name: "UGX 5,000",   amount: 5000,   description: "Prepaid electricity token" },
-        { id: "e2", name: "UGX 10,000",  amount: 10000,  description: "Prepaid electricity token" },
-        { id: "e3", name: "UGX 20,000",  amount: 20000,  description: "Prepaid electricity token" },
-        { id: "e4", name: "UGX 50,000",  amount: 50000,  description: "Prepaid electricity token" },
-        { id: "e5", name: "UGX 100,000", amount: 100000, description: "Prepaid electricity token" },
-        { id: "e6", name: "UGX 200,000", amount: 200000, description: "Prepaid electricity token" },
-      ],
-    },
-    {
-      id: "wenreco", name: "WENRECO", initials: "WEN", color: "#CC5500",
-      inputLabel: "Meter Number", inputPlaceholder: "Enter meter number",
-      plans: [
-        { id: "e1", name: "UGX 5,000",   amount: 5000,   description: "Prepaid electricity token" },
-        { id: "e2", name: "UGX 10,000",  amount: 10000,  description: "Prepaid electricity token" },
-        { id: "e3", name: "UGX 20,000",  amount: 20000,  description: "Prepaid electricity token" },
-        { id: "e4", name: "UGX 50,000",  amount: 50000,  description: "Prepaid electricity token" },
-        { id: "e5", name: "UGX 100,000", amount: 100000, description: "Prepaid electricity token" },
-      ],
-    },
-    {
-      id: "ferdsult", name: "FERDSULT", initials: "FER", color: "#884400",
-      inputLabel: "Meter Number", inputPlaceholder: "Enter meter number",
-      plans: [
-        { id: "e1", name: "UGX 5,000",  amount: 5000,  description: "Prepaid electricity token" },
-        { id: "e2", name: "UGX 10,000", amount: 10000, description: "Prepaid electricity token" },
-        { id: "e3", name: "UGX 20,000", amount: 20000, description: "Prepaid electricity token" },
-        { id: "e4", name: "UGX 50,000", amount: 50000, description: "Prepaid electricity token" },
-      ],
-    },
+    { id: "umeme_prepaid",  name: "UMEME Prepaid (UEDCL)",  initials: "UPP", color: "#FF6600",
+      productCode: UTILITY_CODES.umeme_prepaid,  inputLabel: "Meter Number", inputPlaceholder: "Enter meter number",
+      refField: "meter_number", hasPriceList: false },
+    { id: "umeme_postpaid", name: "UECDL Postpaid",         initials: "UPO", color: "#CC5500",
+      productCode: UTILITY_CODES.umeme_postpaid, inputLabel: "Account Number", inputPlaceholder: "Enter account number",
+      refField: "account_no", hasPriceList: false },
   ],
   water: [
-    {
-      id: "nwsc", name: "NWSC", initials: "NWS", color: "#0066CC",
-      inputLabel: "Account Number", inputPlaceholder: "Enter NWSC account number",
-      plans: [
-        { id: "w1", name: "UGX 5,000",   amount: 5000,   description: "Prepaid water credit" },
-        { id: "w2", name: "UGX 10,000",  amount: 10000,  description: "Prepaid water credit" },
-        { id: "w3", name: "UGX 20,000",  amount: 20000,  description: "Prepaid water credit" },
-        { id: "w4", name: "UGX 50,000",  amount: 50000,  description: "Prepaid water credit" },
-        { id: "w5", name: "UGX 100,000", amount: 100000, description: "Prepaid water credit" },
-      ],
-    },
-    {
-      id: "umbrella", name: "Umbrella Water", initials: "UMB", color: "#336699",
-      inputLabel: "Account Number", inputPlaceholder: "Enter account number",
-      plans: [
-        { id: "w1", name: "UGX 5,000",  amount: 5000,  description: "Prepaid water credit" },
-        { id: "w2", name: "UGX 10,000", amount: 10000, description: "Prepaid water credit" },
-        { id: "w3", name: "UGX 20,000", amount: 20000, description: "Prepaid water credit" },
-        { id: "w4", name: "UGX 50,000", amount: 50000, description: "Prepaid water credit" },
-      ],
-    },
+    { id: "nwsc", name: "NWSC", initials: "NWS", color: "#0066CC",
+      productCode: UTILITY_CODES.nwsc, inputLabel: "Account Number", inputPlaceholder: "Enter NWSC account number",
+      refField: "account_no", hasPriceList: false },
   ],
 };
 
-// ─── Confirm Sheet ────────────────────────────────────────────────────────────
+const QUICK_AMTS = [5000, 10000, 20000, 50000, 100000, 200000];
+
 function ConfirmSheet({
-  visible, plan, provider, accountNo, payerPhone, customerName,
+  visible, provider, accountNo, payerPhone, amount, planName, customerName,
   loading, statusMessage, onConfirm, onCancel,
 }: {
-  visible: boolean; plan: Plan | null; provider: Provider | null;
-  accountNo: string; payerPhone: string; customerName: string;
+  visible: boolean; provider: Provider | null; accountNo: string; payerPhone: string;
+  amount: number; planName: string; customerName: string;
   loading: boolean; statusMessage: string;
   onConfirm: () => void; onCancel: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  if (!plan || !provider) return null;
+  if (!provider) return null;
   return (
     <View style={[cs.overlay, !visible && cs.hidden]} pointerEvents={visible ? "auto" : "none"}>
       <Pressable style={cs.backdrop} onPress={loading ? undefined : onCancel} />
@@ -192,14 +115,10 @@ function ConfirmSheet({
             <Text style={cs.provBadgeTxt}>{provider.initials}</Text>
           </View>
           <View style={cs.summaryInfo}>
-            <Text style={cs.summaryName}>{provider.name} — {plan.name}</Text>
-            {plan.description ? <Text style={cs.summaryDesc}>{plan.description}</Text> : null}
-            {plan.validity ? <Text style={cs.summaryValidity}>{plan.validity}</Text> : null}
+            <Text style={cs.summaryName}>{provider.name}</Text>
+            {planName ? <Text style={cs.summaryDesc}>{planName}</Text> : null}
           </View>
-        </View>
-        <View style={cs.detailRow}>
-          <Text style={cs.detailLabel}>Provider</Text>
-          <Text style={cs.detailVal}>{provider.name}</Text>
+          <Text style={cs.summaryAmt}>UGX {amount.toLocaleString()}</Text>
         </View>
         <View style={cs.detailRow}>
           <Text style={cs.detailLabel}>{provider.inputLabel}</Text>
@@ -217,7 +136,7 @@ function ConfirmSheet({
         ) : null}
         <View style={[cs.detailRow, cs.detailRowLast]}>
           <Text style={cs.detailLabel}>Amount</Text>
-          <Text style={cs.detailAmt}>UGX {plan.amount.toLocaleString()}</Text>
+          <Text style={cs.detailAmt}>UGX {amount.toLocaleString()}</Text>
         </View>
         {statusMessage ? (
           <View style={cs.statusBox}>
@@ -234,7 +153,7 @@ function ConfirmSheet({
           {loading ? (
             <ActivityIndicator color={DARK_GREEN} />
           ) : (
-            <Text style={cs.confirmBtnTxt}>Confirm — UGX {plan.amount.toLocaleString()}</Text>
+            <Text style={cs.confirmBtnTxt}>Confirm — UGX {amount.toLocaleString()}</Text>
           )}
         </TouchableOpacity>
         <TouchableOpacity
@@ -250,122 +169,162 @@ function ConfirmSheet({
   );
 }
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function PayScreen() {
   const insets = useSafeAreaInsets();
-  const [activeCat,      setActiveCat]      = useState<CatKey>("tv");
-  const [activeProv,     setActiveProv]     = useState<Provider>(PROVIDERS["tv"][0]);
-  const [selectedPlan,   setSelectedPlan]   = useState<Plan | null>(null);
-  const [accountNo,      setAccountNo]      = useState("");
-  const [payerPhone,     setPayerPhone]     = useState("");
-  const [sheetOpen,      setSheetOpen]      = useState(false);
-  const [successPlan,    setSuccessPlan]    = useState<Plan | null>(null);
-  const [successProv,    setSuccessProv]    = useState<Provider | null>(null);
-  const [errorMsg,       setErrorMsg]       = useState("");
-  const [loading,        setLoading]        = useState(false);
-  const [statusMsg,      setStatusMsg]      = useState("");
-  const [customerName,   setCustomerName]   = useState("");
+  const [activeCat,   setActiveCat]   = useState<CatKey>("tv");
+  const [activeProv,  setActiveProv]  = useState<Provider>(PROVIDERS["tv"][0]);
+  const [accountNo,   setAccountNo]   = useState("");
+  const [payerPhone,  setPayerPhone]  = useState("");
+  const [customAmt,   setCustomAmt]   = useState("");
 
-  // NWSC location list (only loaded when needed)
-  const [locationList,   setLocationList]   = useState<ChoiceListItem[]>([]);
-  const [locationId,     setLocationId]     = useState<string>("");
+  const [bouquets,        setBouquets]        = useState<PriceListItem[]>([]);
+  const [bouquetsLoading, setBouquetsLoading] = useState(false);
+  const [bouquetsError,   setBouquetsError]   = useState("");
+
+  const [locationList,    setLocationList]    = useState<ChoiceListItem[]>([]);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [locationId,      setLocationId]      = useState<string>("");
 
-  const productCode = PAY_PRODUCT_CODES[activeProv.id] ?? null;
-  const needsLocation = requiresLocation(productCode);
+  const [selected,    setSelected]    = useState<{ amount: number; planCode?: string; planName: string } | null>(null);
+  const [sheetOpen,   setSheetOpen]   = useState(false);
+  const [loading,     setLoading]     = useState(false);
+  const [statusMsg,   setStatusMsg]   = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [errorMsg,    setErrorMsg]    = useState("");
+  const [successMsg,  setSuccessMsg]  = useState("");
 
+  const needsLocation = requiresLocation(activeProv.productCode);
+
+  // Load bouquets when provider changes (for TV)
+  useEffect(() => {
+    setBouquets([]);
+    setBouquetsError("");
+    if (!activeProv.hasPriceList) return;
+    let cancelled = false;
+    setBouquetsLoading(true);
+    relworxApi.priceList(activeProv.productCode)
+      .then((res) => {
+        if (cancelled) return;
+        const list = (res.price_list ?? []).filter((p) => p && p.code && p.price > 0);
+        const seen = new Set<string>();
+        setBouquets(list.filter((p) => seen.has(p.code) ? false : (seen.add(p.code), true)));
+      })
+      .catch((e) => { if (!cancelled) setBouquetsError(e instanceof ApiError ? e.message : "Couldn't load bouquets."); })
+      .finally(() => { if (!cancelled) setBouquetsLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeProv]);
+
+  // Load NWSC location list
   useEffect(() => {
     setLocationList([]);
     setLocationId("");
-    if (!needsLocation || !productCode) return;
+    if (!needsLocation) return;
     let cancelled = false;
     setLocationLoading(true);
-    relworxApi
-      .choiceList(productCode)
+    relworxApi.choiceList(activeProv.productCode)
       .then((res) => { if (!cancelled) setLocationList(res.choice_list ?? []); })
       .catch(() => { if (!cancelled) setLocationList([]); })
       .finally(() => { if (!cancelled) setLocationLoading(false); });
     return () => { cancelled = true; };
-  }, [productCode, needsLocation]);
-
-  const providerList = PROVIDERS[activeCat];
+  }, [activeProv, needsLocation]);
 
   function switchCat(cat: CatKey) {
     Haptics.selectionAsync();
     setActiveCat(cat);
     setActiveProv(PROVIDERS[cat][0]);
-    setSelectedPlan(null);
     setAccountNo("");
-    setLocationId("");
+    setCustomAmt("");
   }
 
   function switchProv(prov: Provider) {
     Haptics.selectionAsync();
     setActiveProv(prov);
-    setSelectedPlan(null);
     setLocationId("");
+    setCustomAmt("");
   }
 
-  function selectPlan(plan: Plan) {
-    if (!productCode) {
-      setErrorMsg(`${activeProv.name} isn't supported by Relworx yet.`);
-      return;
-    }
+  function preflight(): boolean {
     if (!accountNo) {
       setErrorMsg(`Enter your ${activeProv.inputLabel.toLowerCase()} first.`);
-      return;
+      return false;
     }
     if (!payerPhone || payerPhone.replace(/\D/g, "").length < 9) {
-      setErrorMsg("Enter the mobile money phone you'll pay with.");
-      return;
+      setErrorMsg("Enter the mobile-money phone you'll pay with.");
+      return false;
     }
     if (needsLocation && !locationId) {
       setErrorMsg("Pick your service area.");
-      return;
+      return false;
     }
-    Haptics.selectionAsync();
+    return true;
+  }
+
+  function pickBouquet(p: PriceListItem) {
+    if (!preflight()) return;
     setErrorMsg("");
     setStatusMsg("");
     setCustomerName("");
-    setSelectedPlan(plan);
+    setSelected({ amount: p.price, planCode: p.code, planName: p.name });
     setSheetOpen(true);
   }
 
+  function pickQuickAmount(amt: number) {
+    if (!preflight()) return;
+    setErrorMsg("");
+    setStatusMsg("");
+    setCustomerName("");
+    setSelected({ amount: amt, planName: `${activeProv.name} — UGX ${amt.toLocaleString()}` });
+    setSheetOpen(true);
+  }
+
+  function tryCustomAmount() {
+    const n = Number((customAmt || "").replace(/[^0-9.]/g, ""));
+    if (!n || n < 100) { setErrorMsg("Enter at least UGX 100."); return; }
+    pickQuickAmount(Math.round(n));
+  }
+
   async function handleConfirm() {
-    if (!selectedPlan || !productCode || loading) return;
+    if (!selected || loading) return;
     const msisdn = formatMsisdn(payerPhone);
+    setUserPhone(msisdn).catch(() => {});
     setLoading(true);
-    setStatusMsg("Validating…");
+    setStatusMsg("Validating account…");
     try {
+      const productCode = selected.planCode ?? activeProv.productCode;
+      const extra: Record<string, unknown> = {};
+      if (activeProv.refField === "meter_number") {
+        extra.meter_number = accountNo;
+      } else {
+        extra.account_no = accountNo;
+      }
+      if (needsLocation && locationId) extra.location_id = locationId;
+
       const v = await relworxApi.validateProduct({
         msisdn,
-        amount: selectedPlan.amount,
+        amount: selected.amount,
         product_code: productCode,
-        contact_phone: accountNo,
-        ...(needsLocation && locationId ? { location_id: locationId } : {}),
+        contact_phone: msisdn,
+        ...extra,
       });
       if (v.customer_name) setCustomerName(v.customer_name);
-      setStatusMsg("Sending payment request…");
+      setStatusMsg("Sending mobile-money request…");
       const p = await relworxApi.purchaseProduct(v.validation_reference);
-      setStatusMsg("Awaiting mobile money confirmation…");
-      const final = await pollRequestStatus(p.internal_reference, {
-        timeoutMs: 60000,
-      });
+      setStatusMsg("Awaiting your mobile-money confirmation…");
+      const final = await pollRequestStatus(p.internal_reference, { timeoutMs: 75000 });
       const ok = (final.status ?? "").toLowerCase() === "success";
       if (ok) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setSuccessPlan(selectedPlan);
-        setSuccessProv(activeProv);
-        setSelectedPlan(null);
+        setSuccessMsg(`${activeProv.name} payment of UGX ${selected.amount.toLocaleString()} successful.`);
         setSheetOpen(false);
+        setSelected(null);
         setAccountNo("");
+        setCustomAmt("");
         setStatusMsg("");
       } else {
         setStatusMsg(final.message || "Still processing — check Transactions.");
       }
     } catch (e) {
-      const msg =
-        e instanceof ApiError ? e.message : "Payment failed. Please try again.";
+      const msg = e instanceof ApiError ? e.message : "Payment failed. Please try again.";
       setErrorMsg(msg);
       setStatusMsg("");
       setSheetOpen(false);
@@ -377,25 +336,24 @@ export default function PayScreen() {
 
   return (
     <View style={s.root}>
-      {/* ── Balance Header ── */}
       <View style={[s.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Feather name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={s.topBarCenter}>
-          <Text style={s.topBarLabel}>Pay Bills via Relworx</Text>
-          <Text style={s.topBarBalance}>Mobile Money</Text>
+          <Text style={s.topBarLabel}>Your Wallet Balance</Text>
+          <Text style={s.topBarBalance}>UGX {LOCAL_BALANCE.toLocaleString()}</Text>
         </View>
         <View style={{ width: 38 }} />
       </View>
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Category Tabs ── */}
+        {/* Category tabs */}
         <View style={s.catRow}>
           {CATS.map((cat) => {
             const active = activeCat === cat.key;
@@ -413,19 +371,18 @@ export default function PayScreen() {
           })}
         </View>
 
-        {/* ── Provider Selector ── */}
+        {/* Provider chips */}
         <ScrollView
           horizontal showsHorizontalScrollIndicator={false}
           contentContainerStyle={s.provRow}
           style={{ flexGrow: 0, marginBottom: 14 }}
         >
-          {providerList.map((prov) => {
+          {PROVIDERS[activeCat].map((prov) => {
             const active = activeProv.id === prov.id;
-            const supported = !!PAY_PRODUCT_CODES[prov.id];
             return (
               <TouchableOpacity
                 key={prov.id}
-                style={[s.provChip, active && s.provChipActive, !supported && { opacity: 0.5 }]}
+                style={[s.provChip, active && s.provChipActive]}
                 onPress={() => switchProv(prov)}
                 activeOpacity={0.8}
               >
@@ -436,7 +393,7 @@ export default function PayScreen() {
           })}
         </ScrollView>
 
-        {/* ── Service Account Input ── */}
+        {/* Service account input */}
         <View style={s.inputWrap}>
           <Text style={s.inputLabel}>{activeProv.inputLabel}</Text>
           <TextInput
@@ -445,13 +402,12 @@ export default function PayScreen() {
             placeholderTextColor={MUTED}
             value={accountNo}
             onChangeText={setAccountNo}
-            keyboardType={activeProv.inputLabel === "Email Address" ? "email-address" : "number-pad"}
-            contextMenuHidden
+            keyboardType="number-pad"
             selectionColor={LIME}
           />
         </View>
 
-        {/* ── Location selector (NWSC only) ── */}
+        {/* NWSC location selector */}
         {needsLocation && (
           <View style={s.inputWrap}>
             <Text style={s.inputLabel}>Service Area</Text>
@@ -463,7 +419,7 @@ export default function PayScreen() {
             ) : locationList.length === 0 ? (
               <View style={s.input}><Text style={{ color: MUTED }}>No service areas available right now.</Text></View>
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
                 {locationList.map((loc) => {
                   const active = locationId === loc.id;
                   return (
@@ -482,9 +438,9 @@ export default function PayScreen() {
           </View>
         )}
 
-        {/* ── Mobile Money payer phone ── */}
+        {/* Mobile money payer phone */}
         <View style={s.inputWrap}>
-          <Text style={s.inputLabel}>Mobile Money Phone (Payer)</Text>
+          <Text style={s.inputLabel}>Mobile-Money Phone (Payer)</Text>
           <TextInput
             style={s.input}
             placeholder="0701 454 887"
@@ -496,18 +452,15 @@ export default function PayScreen() {
           />
         </View>
 
-        {/* ── Success Banner ── */}
-        {successPlan && successProv && (
+        {!!successMsg && (
           <View style={s.successBanner}>
             <Feather name="check-circle" size={16} color={DARK_GREEN} />
-            <Text style={s.successTxt}>{successProv.name} {successPlan.name} paid! UGX {successPlan.amount.toLocaleString()} charged.</Text>
-            <TouchableOpacity onPress={() => { setSuccessPlan(null); setSuccessProv(null); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={s.successTxt}>{successMsg}</Text>
+            <TouchableOpacity onPress={() => setSuccessMsg("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Feather name="x" size={14} color={DARK_GREEN} />
             </TouchableOpacity>
           </View>
         )}
-
-        {/* ── Error Banner ── */}
         {!!errorMsg && (
           <View style={s.errorBanner}>
             <Feather name="alert-circle" size={16} color="#7A1A1A" />
@@ -518,41 +471,88 @@ export default function PayScreen() {
           </View>
         )}
 
-        {/* ── Plans List ── */}
-        <View style={s.planList}>
-          <Text style={s.sectionLabel}>{activeProv.plans.length} Plans Available</Text>
-          {activeProv.plans.map((plan, i) => (
-            <TouchableOpacity
-              key={plan.id}
-              style={[s.planRow, i < activeProv.plans.length - 1 && s.planRowBorder]}
-              onPress={() => selectPlan(plan)}
-              activeOpacity={0.7}
-            >
-              <View style={s.planLeft}>
-                <Text style={s.planName}>{plan.name}</Text>
-                {plan.description ? <Text style={s.planDesc}>{plan.description}</Text> : null}
-                {plan.validity ? (
-                  <View style={s.validityChip}>
-                    <Feather name="clock" size={10} color={MUTED} style={{ marginRight: 3 }} />
-                    <Text style={s.validityTxt}>{plan.validity}</Text>
-                  </View>
-                ) : null}
+        {/* TV bouquet list */}
+        {activeProv.hasPriceList && (
+          <View style={s.planList}>
+            <Text style={s.sectionLabel}>
+              {bouquetsLoading ? "Loading bouquets…" : `${bouquets.length} bouquet${bouquets.length === 1 ? "" : "s"}`}
+            </Text>
+            {bouquetsLoading && (
+              <View style={{ padding: 24, alignItems: "center" }}><ActivityIndicator color={DARK_GREEN} /></View>
+            )}
+            {bouquetsError && !bouquetsLoading ? (
+              <View style={{ padding: 16 }}>
+                <Text style={{ color: "#7A1A1A", fontFamily: "Inter_500Medium", fontSize: 12 }}>{bouquetsError}</Text>
               </View>
-              <View style={s.planRight}>
-                <Text style={s.planAmt}>UGX {plan.amount.toLocaleString()}</Text>
-                <View style={s.payChip}><Text style={s.payChipTxt}>Pay</Text></View>
+            ) : null}
+            {!bouquetsLoading && !bouquetsError && bouquets.length === 0 && (
+              <View style={{ padding: 16 }}>
+                <Text style={{ color: MUTED, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+                  No bouquets available for {activeProv.name} right now.
+                </Text>
               </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+            )}
+            {bouquets.map((p, i) => (
+              <TouchableOpacity
+                key={`${p.code}-${i}`}
+                style={[s.planRow, i < bouquets.length - 1 && s.planRowBorder]}
+                onPress={() => pickBouquet(p)}
+                activeOpacity={0.7}
+              >
+                <View style={s.planLeft}>
+                  <Text style={s.planName} numberOfLines={2}>{p.name}</Text>
+                </View>
+                <View style={s.planRight}>
+                  <Text style={s.planAmt}>UGX {p.price.toLocaleString()}</Text>
+                  <View style={s.payChip}><Text style={s.payChipTxt}>Pay</Text></View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Utilities: quick amounts + custom */}
+        {!activeProv.hasPriceList && (
+          <View style={s.planList}>
+            <Text style={s.sectionLabel}>Quick Amount</Text>
+            <View style={s.amtGrid}>
+              {QUICK_AMTS.map((amt) => (
+                <TouchableOpacity
+                  key={amt}
+                  style={s.amtPill}
+                  onPress={() => pickQuickAmount(amt)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={s.amtPillTxt}>{amt.toLocaleString()}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[s.inputLabel, { paddingHorizontal: 16, marginTop: 14 }]}>Custom Amount</Text>
+            <View style={{ flexDirection: "row", paddingHorizontal: 16, gap: 8, paddingBottom: 16 }}>
+              <TextInput
+                style={[s.input, { flex: 1, marginBottom: 0 }]}
+                placeholder="Enter amount in UGX"
+                placeholderTextColor={MUTED}
+                value={customAmt}
+                onChangeText={setCustomAmt}
+                keyboardType="numeric"
+                selectionColor={LIME}
+              />
+              <TouchableOpacity style={s.smallBtn} onPress={tryCustomAmount} activeOpacity={0.85}>
+                <Text style={s.smallBtnTxt}>Pay</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       <ConfirmSheet
         visible={sheetOpen}
-        plan={selectedPlan}
         provider={activeProv}
         accountNo={accountNo}
-        payerPhone={payerPhone}
+        payerPhone={payerPhone ? formatMsisdn(payerPhone) : ""}
+        amount={selected?.amount ?? 0}
+        planName={selected?.planName ?? ""}
         customerName={customerName}
         loading={loading}
         statusMessage={statusMsg}
@@ -564,7 +564,6 @@ export default function PayScreen() {
   );
 }
 
-// ─── Confirm Sheet Styles ─────────────────────────────────────────────────────
 const cs = StyleSheet.create({
   hidden:    { display: "none" },
   overlay:   { ...StyleSheet.absoluteFillObject, zIndex: 99, justifyContent: "flex-end" },
@@ -577,8 +576,8 @@ const cs = StyleSheet.create({
   provBadgeTxt:    { fontFamily: "Inter_700Bold", fontSize: 13, color: "#fff" },
   summaryInfo:     { flex: 1 },
   summaryName:     { fontFamily: "Inter_600SemiBold", fontSize: 14, color: TEXT, marginBottom: 2 },
-  summaryDesc:     { fontFamily: "Inter_400Regular", fontSize: 12, color: MUTED },
-  summaryValidity: { fontFamily: "Inter_500Medium", fontSize: 11, color: DARK_GREEN, marginTop: 2 },
+  summaryDesc:     { fontFamily: "Inter_400Regular", fontSize: 11, color: MUTED, lineHeight: 15 },
+  summaryAmt:      { fontFamily: "Inter_700Bold", fontSize: 14, color: DARK_GREEN },
   detailRow:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: SEP },
   detailRowLast:   { borderBottomWidth: 0, marginBottom: 20 },
   detailLabel:     { fontFamily: "Inter_400Regular", fontSize: 13, color: MUTED },
@@ -593,7 +592,6 @@ const cs = StyleSheet.create({
   statusTxt:       { flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, color: DARK_GREEN },
 });
 
-// ─── Screen Styles ────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   root:         { flex: 1, backgroundColor: BG },
   topBar:       { backgroundColor: DARK_GREEN, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, marginBottom: 14, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
@@ -624,12 +622,14 @@ const s = StyleSheet.create({
   planRow:       { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14 },
   planRowBorder: { borderBottomWidth: 1, borderBottomColor: SEP },
   planLeft:      { flex: 1, gap: 3 },
-  planName:      { fontFamily: "Inter_600SemiBold", fontSize: 14, color: TEXT },
-  planDesc:      { fontFamily: "Inter_400Regular", fontSize: 11, color: MUTED },
-  validityChip:  { flexDirection: "row", alignItems: "center", marginTop: 2 },
-  validityTxt:   { fontFamily: "Inter_400Regular", fontSize: 10, color: MUTED },
+  planName:      { fontFamily: "Inter_600SemiBold", fontSize: 13, color: TEXT, lineHeight: 18 },
   planRight:     { alignItems: "flex-end", gap: 6 },
   planAmt:       { fontFamily: "Inter_700Bold", fontSize: 14, color: TEXT },
   payChip:       { backgroundColor: "#DCF8E6", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
   payChipTxt:    { fontFamily: "Inter_600SemiBold", fontSize: 11, color: DARK_GREEN },
+  amtGrid:       { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 4 },
+  amtPill:       { paddingHorizontal: 16, paddingVertical: 11, borderRadius: 12, backgroundColor: BG, borderWidth: 1.5, borderColor: BORDER, minWidth: 100, alignItems: "center" },
+  amtPillTxt:    { fontFamily: "Inter_600SemiBold", fontSize: 13, color: TEXT },
+  smallBtn:      { backgroundColor: DARK_GREEN, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 13, alignItems: "center", justifyContent: "center" },
+  smallBtnTxt:   { fontFamily: "Inter_700Bold", fontSize: 13, color: LIME },
 });

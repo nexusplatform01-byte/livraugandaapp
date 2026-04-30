@@ -19,11 +19,12 @@ import {
   formatMsisdn,
   pollRequestStatus,
   relworxApi,
+  type PriceListItem,
 } from "@/lib/relworx";
 import { ApiError } from "@/lib/api";
-import { BUY_PRODUCT_CODES } from "@/lib/productCodes";
+import { AIRTIME_CODES, INTERNET_CODES, VOICE_CODES } from "@/lib/productCodes";
+import { setUserPhone } from "@/lib/userSession";
 
-// ─── Theme ──────────────────────────────────────────────────────────────────
 const DARK_GREEN = "#1A3B2F";
 const LIME       = "#C6F135";
 const BG         = "#F5F7F5";
@@ -33,97 +34,56 @@ const TEXT       = "#1A3B2F";
 const MUTED      = "#7A9A7A";
 const SEP        = "#F0F4F0";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+const LOCAL_BALANCE = 209891;
+
 type CatKey  = "airtime" | "voice" | "data";
-type ProvKey = "mtn" | "airtel";
+type ProvKey = "mtn" | "airtel" | "utl" | "roke";
 
 interface Plan {
-  id: string;
+  code: string;
   name: string;
   amount: number;
-  validity?: string;
-  description?: string;
 }
 
-// ─── Sub-categories ───────────────────────────────────────────────────────────
 const CATS: { key: CatKey; label: string; icon: string }[] = [
   { key: "airtime", label: "Airtime",     icon: "phone" },
   { key: "voice",   label: "Voice",       icon: "mic"   },
   { key: "data",    label: "Data Bundle", icon: "wifi"  },
 ];
 
-// ─── Provider Meta ────────────────────────────────────────────────────────────
 const PROVIDERS: Record<ProvKey, { name: string; color: string; initials: string }> = {
   mtn:    { name: "MTN Uganda",    color: "#C8960A", initials: "MTN" },
   airtel: { name: "Airtel Uganda", color: "#C0392B", initials: "AIR" },
+  utl:    { name: "UTL Uganda",    color: "#3F51B5", initials: "UTL" },
+  roke:   { name: "Roke Telecom",  color: "#1B7A3D", initials: "RTU" },
 };
 
-// ─── Plans Data ───────────────────────────────────────────────────────────────
-const PLANS: Record<CatKey, Record<ProvKey, Plan[]>> = {
-  airtime: {
-    mtn: [
-      { id: "a1", name: "UGX 500",    amount: 500   },
-      { id: "a2", name: "UGX 1,000",  amount: 1000  },
-      { id: "a3", name: "UGX 2,000",  amount: 2000  },
-      { id: "a4", name: "UGX 5,000",  amount: 5000  },
-      { id: "a5", name: "UGX 10,000", amount: 10000 },
-      { id: "a6", name: "UGX 20,000", amount: 20000 },
-    ],
-    airtel: [
-      { id: "a1", name: "UGX 500",    amount: 500   },
-      { id: "a2", name: "UGX 1,000",  amount: 1000  },
-      { id: "a3", name: "UGX 2,000",  amount: 2000  },
-      { id: "a4", name: "UGX 5,000",  amount: 5000  },
-      { id: "a5", name: "UGX 10,000", amount: 10000 },
-      { id: "a6", name: "UGX 20,000", amount: 20000 },
-    ],
-  },
-  voice: {
-    mtn: [
-      { id: "v1", name: "Voice 1,000",  amount: 1000,  validity: "7 days",  description: "150 on-net mins + 50MB" },
-      { id: "v2", name: "Voice 3,000",  amount: 3000,  validity: "30 days", description: "500 on-net mins + 200MB" },
-      { id: "v3", name: "Voice 5,000",  amount: 5000,  validity: "30 days", description: "1,000 on-net mins + 500MB" },
-      { id: "v4", name: "Voice 10,000", amount: 10000, validity: "30 days", description: "Unlimited on-net + 1GB" },
-    ],
-    airtel: [
-      { id: "v1", name: "TalkMore 1,000",  amount: 1000,  validity: "7 days",  description: "100 on-net + 30 off-net mins" },
-      { id: "v2", name: "TalkMore 3,000",  amount: 3000,  validity: "30 days", description: "400 on-net + 100 off-net mins" },
-      { id: "v3", name: "TalkMore 5,000",  amount: 5000,  validity: "30 days", description: "800 on-net + 200 off-net mins" },
-      { id: "v4", name: "TalkMore 10,000", amount: 10000, validity: "30 days", description: "Unlimited on-net + 300 off-net mins" },
-    ],
-  },
-  data: {
-    mtn: [
-      { id: "d1", name: "1GB Daily",  amount: 3000,  validity: "1 day",   description: "Daily plan" },
-      { id: "d2", name: "2GB",        amount: 5000,  validity: "30 days", description: "Monthly plan" },
-      { id: "d3", name: "5GB",        amount: 10000, validity: "30 days", description: "Monthly plan" },
-      { id: "d4", name: "10GB",       amount: 18000, validity: "30 days", description: "Monthly plan" },
-      { id: "d5", name: "20GB",       amount: 30000, validity: "30 days", description: "Monthly plan" },
-      { id: "d6", name: "50GB",       amount: 60000, validity: "30 days", description: "Monthly plan" },
-    ],
-    airtel: [
-      { id: "d1", name: "1.5GB",  amount: 3000,  validity: "30 days", description: "Monthly plan" },
-      { id: "d2", name: "3GB",    amount: 6000,  validity: "30 days", description: "Monthly plan" },
-      { id: "d3", name: "6GB",    amount: 10000, validity: "30 days", description: "Monthly plan" },
-      { id: "d4", name: "12GB",   amount: 18000, validity: "30 days", description: "Monthly plan" },
-      { id: "d5", name: "25GB",   amount: 35000, validity: "30 days", description: "Monthly plan" },
-    ],
-  },
-};
+function providersFor(cat: CatKey): ProvKey[] {
+  if (cat === "airtime") return ["mtn", "airtel", "utl"];
+  if (cat === "voice")   return ["mtn", "airtel"];
+  return ["mtn", "airtel", "roke"];
+}
 
-// ─── Confirm Sheet ────────────────────────────────────────────────────────────
+function productCodeFor(cat: CatKey, prov: ProvKey): string | null {
+  if (cat === "airtime") return AIRTIME_CODES[prov] ?? null;
+  if (cat === "voice")   return VOICE_CODES[prov] ?? null;
+  if (cat === "data")    return INTERNET_CODES[prov] ?? null;
+  return null;
+}
+
+const AIRTIME_AMOUNTS = [500, 1000, 2000, 5000, 10000, 20000, 50000];
+
 function ConfirmSheet({
-  visible, plan, provider, accountNo, customerName,
+  visible, plan, providerName, recipient, customerName,
   loading, statusMessage, onConfirm, onCancel,
 }: {
-  visible: boolean; plan: Plan | null; provider: ProvKey;
-  accountNo: string; customerName: string;
+  visible: boolean; plan: Plan | null; providerName: string;
+  recipient: string; customerName: string;
   loading: boolean; statusMessage: string;
   onConfirm: () => void; onCancel: () => void;
 }) {
   const insets = useSafeAreaInsets();
   if (!plan) return null;
-  const prov = PROVIDERS[provider];
   return (
     <View style={[cs.overlay, !visible && cs.hidden]} pointerEvents={visible ? "auto" : "none"}>
       <Pressable style={cs.backdrop} onPress={loading ? undefined : onCancel} />
@@ -131,31 +91,24 @@ function ConfirmSheet({
         <View style={cs.handle} />
         <Text style={cs.title}>Confirm Purchase</Text>
         <View style={cs.summaryCard}>
-          <View style={[cs.provBadge, { backgroundColor: prov.color }]}>
-            <Text style={cs.provBadgeTxt}>{prov.initials}</Text>
-          </View>
           <View style={cs.summaryInfo}>
-            <Text style={cs.summaryName}>{plan.name}</Text>
-            {plan.description ? <Text style={cs.summaryDesc}>{plan.description}</Text> : null}
-            {plan.validity ? <Text style={cs.summaryValidity}>{plan.validity}</Text> : null}
+            <Text style={cs.summaryName}>{providerName}</Text>
+            <Text style={cs.summaryDesc}>{plan.name}</Text>
           </View>
+          <Text style={cs.summaryAmt}>UGX {plan.amount.toLocaleString()}</Text>
         </View>
         <View style={cs.detailRow}>
-          <Text style={cs.detailLabel}>Provider</Text>
-          <Text style={cs.detailVal}>{prov.name}</Text>
-        </View>
-        <View style={cs.detailRow}>
-          <Text style={cs.detailLabel}>Phone Number</Text>
-          <Text style={cs.detailVal}>{accountNo || "—"}</Text>
+          <Text style={cs.detailLabel}>Phone</Text>
+          <Text style={cs.detailVal}>{recipient || "—"}</Text>
         </View>
         {customerName ? (
           <View style={cs.detailRow}>
-            <Text style={cs.detailLabel}>Recipient</Text>
+            <Text style={cs.detailLabel}>Account</Text>
             <Text style={cs.detailVal}>{customerName}</Text>
           </View>
         ) : null}
         <View style={[cs.detailRow, cs.detailRowLast]}>
-          <Text style={cs.detailLabel}>Amount</Text>
+          <Text style={cs.detailLabel}>Total</Text>
           <Text style={cs.detailAmt}>UGX {plan.amount.toLocaleString()}</Text>
         </View>
         {statusMessage ? (
@@ -189,94 +142,123 @@ function ConfirmSheet({
   );
 }
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function BuyScreen() {
   const insets = useSafeAreaInsets();
-  const [activeCat,    setActiveCat]    = useState<CatKey>("airtime");
-  const [activeProv,   setActiveProv]   = useState<ProvKey>("mtn");
+  const [activeCat,  setActiveCat]  = useState<CatKey>("airtime");
+  const [activeProv, setActiveProv] = useState<ProvKey>("mtn");
+  const [phone,      setPhone]      = useState("");
+  const [airtimeAmt, setAirtimeAmt] = useState<number | null>(null);
+  const [airtimeCustom, setAirtimeCustom] = useState<string>("");
+
+  const [plans,        setPlans]        = useState<PriceListItem[]>([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const [plansError,   setPlansError]   = useState<string>("");
+
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [accountNo,    setAccountNo]    = useState("");
   const [sheetOpen,    setSheetOpen]    = useState(false);
-  const [balance,      setBalance]      = useState<number | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(true);
-  const [successPlan,  setSuccessPlan]  = useState<Plan | null>(null);
-  const [errorMsg,     setErrorMsg]     = useState("");
   const [loading,      setLoading]      = useState(false);
   const [statusMsg,    setStatusMsg]    = useState("");
   const [customerName, setCustomerName] = useState("");
+  const [errorMsg,     setErrorMsg]     = useState("");
+  const [successMsg,   setSuccessMsg]   = useState("");
 
-  const plans = PLANS[activeCat][activeProv];
+  const productCode = productCodeFor(activeCat, activeProv);
+  const providerName = PROVIDERS[activeProv].name;
 
-  async function refreshBalance() {
-    setBalanceLoading(true);
-    try {
-      const res = await relworxApi.walletBalance("UGX");
-      setBalance(res.balance);
-    } catch {
-      setBalance(null);
-    } finally {
-      setBalanceLoading(false);
-    }
+  // Fetch price list when category/provider changes (voice/data only).
+  useEffect(() => {
+    setPlans([]);
+    setPlansError("");
+    if (activeCat === "airtime" || !productCode) return;
+    let cancelled = false;
+    setPlansLoading(true);
+    relworxApi.priceList(productCode)
+      .then((res) => {
+        if (cancelled) return;
+        const list = (res.price_list ?? []).filter((p) => p && p.code && p.price > 0);
+        // De-dupe by code
+        const seen = new Set<string>();
+        setPlans(list.filter((p) => seen.has(p.code) ? false : (seen.add(p.code), true)));
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setPlansError(e instanceof ApiError ? e.message : "Couldn't load bundles.");
+      })
+      .finally(() => { if (!cancelled) setPlansLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeCat, productCode]);
+
+  function switchCat(cat: CatKey) {
+    Haptics.selectionAsync();
+    setActiveCat(cat);
+    const list = providersFor(cat);
+    if (!list.includes(activeProv)) setActiveProv(list[0]);
+    setAirtimeAmt(null);
+    setAirtimeCustom("");
   }
 
-  useEffect(() => {
-    refreshBalance();
-  }, []);
-
-  function selectPlan(plan: Plan) {
-    if (!accountNo || accountNo.replace(/\D/g, "").length < 9) {
-      setErrorMsg("Enter a phone number first.");
+  function pickAirtime(amt: number) {
+    if (!productCode) {
+      setErrorMsg("This network isn't supported.");
       return;
     }
-    Haptics.selectionAsync();
+    if (!phone || phone.replace(/\D/g, "").length < 9) {
+      setErrorMsg("Enter the phone number to top up first.");
+      return;
+    }
     setErrorMsg("");
     setStatusMsg("");
     setCustomerName("");
-    setSelectedPlan(plan);
+    setAirtimeAmt(amt);
+    setSelectedPlan({ code: productCode, name: `Airtime UGX ${amt.toLocaleString()}`, amount: amt });
+    setSheetOpen(true);
+  }
+
+  function pickBundle(p: PriceListItem) {
+    if (!productCode) return;
+    if (!phone || phone.replace(/\D/g, "").length < 9) {
+      setErrorMsg("Enter the phone number to top up first.");
+      return;
+    }
+    setErrorMsg("");
+    setStatusMsg("");
+    setCustomerName("");
+    setSelectedPlan({ code: p.code, name: p.name, amount: p.price });
     setSheetOpen(true);
   }
 
   async function handleConfirm() {
     if (!selectedPlan || loading) return;
-    const productCode = BUY_PRODUCT_CODES[activeCat][activeProv];
-    if (!productCode) {
-      setErrorMsg("This provider isn't supported yet.");
-      setSheetOpen(false);
-      return;
-    }
-    const msisdn = formatMsisdn(accountNo);
+    const msisdn = formatMsisdn(phone);
+    setUserPhone(msisdn).catch(() => {});
     setLoading(true);
-    setStatusMsg("Validating…");
+    setStatusMsg("Validating phone…");
     try {
       const v = await relworxApi.validateProduct({
         msisdn,
         amount: selectedPlan.amount,
-        product_code: productCode,
+        product_code: selectedPlan.code,
         contact_phone: msisdn,
       });
       if (v.customer_name) setCustomerName(v.customer_name);
-      setStatusMsg("Processing payment…");
+      setStatusMsg("Sending mobile-money request…");
       const p = await relworxApi.purchaseProduct(v.validation_reference);
-      setStatusMsg("Confirming with the network…");
-      const final = await pollRequestStatus(p.internal_reference, {
-        timeoutMs: 45000,
-      });
+      setStatusMsg("Awaiting your mobile-money confirmation…");
+      const final = await pollRequestStatus(p.internal_reference, { timeoutMs: 75000 });
       const ok = (final.status ?? "").toLowerCase() === "success";
       if (ok) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setSuccessPlan(selectedPlan);
-        setSelectedPlan(null);
+        setSuccessMsg(`${selectedPlan.name} sent to ${msisdn}.`);
         setSheetOpen(false);
-        setAccountNo("");
+        setSelectedPlan(null);
         setStatusMsg("");
-        refreshBalance();
+        setAirtimeAmt(null);
+        setAirtimeCustom("");
       } else {
         setStatusMsg(final.message || "Still processing — check Transactions.");
-        // leave the sheet open so the user sees the status
       }
     } catch (e) {
-      const msg =
-        e instanceof ApiError ? e.message : "Purchase failed. Please try again.";
+      const msg = e instanceof ApiError ? e.message : "Purchase failed. Please try again.";
       setErrorMsg(msg);
       setStatusMsg("");
       setSheetOpen(false);
@@ -286,140 +268,194 @@ export default function BuyScreen() {
     }
   }
 
-  const catLabel = CATS.find((c) => c.key === activeCat)?.label ?? "Airtime";
+  function tryCustomAirtime() {
+    const n = Number((airtimeCustom || "").replace(/[^0-9.]/g, ""));
+    if (!n || n < 100) {
+      setErrorMsg("Enter at least UGX 100.");
+      return;
+    }
+    pickAirtime(Math.round(n));
+  }
 
   return (
     <View style={s.root}>
-      {/* ── Balance Header ── */}
       <View style={[s.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Feather name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={s.topBarCenter}>
-          <Text style={s.topBarLabel}>Wallet Balance (Relworx)</Text>
-          {balanceLoading ? (
-            <ActivityIndicator color="#fff" size="small" style={{ marginTop: 4 }} />
-          ) : (
-            <Text style={s.topBarBalance}>
-              {balance == null ? "UGX —" : `UGX ${balance.toLocaleString()}`}
-            </Text>
-          )}
+          <Text style={s.topBarLabel}>Your Wallet Balance</Text>
+          <Text style={s.topBarBalance}>UGX {LOCAL_BALANCE.toLocaleString()}</Text>
         </View>
         <View style={{ width: 38 }} />
       </View>
 
-      {/* ── Sub-category Filter (Airtime / Voice / Data) ── */}
-      <View style={s.catRow}>
-        {CATS.map((cat) => {
-          const active = activeCat === cat.key;
-          return (
-            <TouchableOpacity
-              key={cat.key}
-              style={[s.catPill, active && s.catPillActive]}
-              onPress={() => { Haptics.selectionAsync(); setActiveCat(cat.key); setSelectedPlan(null); }}
-              activeOpacity={0.8}
-            >
-              <Feather name={cat.icon as any} size={12} color={active ? DARK_GREEN : MUTED} style={{ marginRight: 4 }} />
-              <Text style={[s.catLabel, active && s.catLabelActive]}>{cat.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* ── Provider Switcher ── */}
-      <View style={s.provSwitcher}>
-        {(["mtn", "airtel"] as ProvKey[]).map((prov) => {
-          const active = activeProv === prov;
-          const meta = PROVIDERS[prov];
-          return (
-            <TouchableOpacity
-              key={prov}
-              style={[s.provTab, active && s.provTabActive]}
-              onPress={() => { Haptics.selectionAsync(); setActiveProv(prov); setSelectedPlan(null); }}
-              activeOpacity={0.8}
-            >
-              <View style={[s.provDot, { backgroundColor: meta.color }, !active && s.provDotDim]} />
-              <Text style={[s.provTabTxt, active && s.provTabTxtActive]}>{meta.name}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* ── Phone Input ── */}
-      <View style={s.inputWrap}>
-        <Text style={s.inputLabel}>Phone Number</Text>
-        <TextInput
-          style={s.input}
-          placeholder="e.g. 0772 000 000"
-          placeholderTextColor={MUTED}
-          value={accountNo}
-          onChangeText={setAccountNo}
-          keyboardType="phone-pad"
-          contextMenuHidden
-          selectionColor={LIME}
-        />
-      </View>
-
-      {/* ── Success Banner ── */}
-      {successPlan && (
-        <View style={s.successBanner}>
-          <Feather name="check-circle" size={16} color={DARK_GREEN} />
-          <Text style={s.successTxt}>{successPlan.name} purchased! UGX {successPlan.amount.toLocaleString()} deducted.</Text>
-          <TouchableOpacity onPress={() => setSuccessPlan(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Feather name="x" size={14} color={DARK_GREEN} />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* ── Error Banner ── */}
-      {!!errorMsg && (
-        <View style={s.errorBanner}>
-          <Feather name="alert-circle" size={16} color="#7A1A1A" />
-          <Text style={s.errorTxt}>{errorMsg}</Text>
-          <TouchableOpacity onPress={() => setErrorMsg("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Feather name="x" size={14} color="#7A1A1A" />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* ── Plans List ── */}
       <ScrollView
-        style={s.planList}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={s.sectionLabel}>{plans.length} {catLabel} Plans</Text>
-        {plans.map((plan, i) => (
-          <TouchableOpacity
-            key={plan.id}
-            style={[s.planRow, i < plans.length - 1 && s.planRowBorder]}
-            onPress={() => selectPlan(plan)}
-            activeOpacity={0.7}
-          >
-            <View style={s.planLeft}>
-              <Text style={s.planName}>{plan.name}</Text>
-              {plan.description ? <Text style={s.planDesc}>{plan.description}</Text> : null}
-              {plan.validity ? (
-                <View style={s.validityChip}>
-                  <Feather name="clock" size={10} color={MUTED} style={{ marginRight: 3 }} />
-                  <Text style={s.validityTxt}>{plan.validity}</Text>
+        {/* Category tabs */}
+        <View style={s.catRow}>
+          {CATS.map((cat) => {
+            const active = activeCat === cat.key;
+            return (
+              <TouchableOpacity
+                key={cat.key}
+                style={[s.catPill, active && s.catPillActive]}
+                onPress={() => switchCat(cat.key)}
+                activeOpacity={0.8}
+              >
+                <Feather name={cat.icon as any} size={12} color={active ? DARK_GREEN : MUTED} style={{ marginRight: 4 }} />
+                <Text style={[s.catLabel, active && s.catLabelActive]}>{cat.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Provider chips */}
+        <ScrollView
+          horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.provRow}
+          style={{ flexGrow: 0, marginBottom: 14 }}
+        >
+          {providersFor(activeCat).map((pid) => {
+            const meta = PROVIDERS[pid];
+            const active = activeProv === pid;
+            return (
+              <TouchableOpacity
+                key={pid}
+                style={[s.provChip, active && s.provChipActive]}
+                onPress={() => { Haptics.selectionAsync(); setActiveProv(pid); }}
+                activeOpacity={0.8}
+              >
+                <View style={[s.provDot, { backgroundColor: meta.color }]} />
+                <Text style={[s.provChipTxt, active && s.provChipTxtActive]}>{meta.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* Phone field */}
+        <View style={s.inputWrap}>
+          <Text style={s.inputLabel}>Phone Number to Top Up</Text>
+          <TextInput
+            style={s.input}
+            placeholder="0701 454 887"
+            placeholderTextColor={MUTED}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            selectionColor={LIME}
+          />
+          <Text style={s.helper}>This is also the mobile-money number that will be charged.</Text>
+        </View>
+
+        {/* Success / error banners */}
+        {!!successMsg && (
+          <View style={s.successBanner}>
+            <Feather name="check-circle" size={16} color={DARK_GREEN} />
+            <Text style={s.successTxt}>{successMsg}</Text>
+            <TouchableOpacity onPress={() => setSuccessMsg("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={14} color={DARK_GREEN} />
+            </TouchableOpacity>
+          </View>
+        )}
+        {!!errorMsg && (
+          <View style={s.errorBanner}>
+            <Feather name="alert-circle" size={16} color="#7A1A1A" />
+            <Text style={s.errorTxt}>{errorMsg}</Text>
+            <TouchableOpacity onPress={() => setErrorMsg("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={14} color="#7A1A1A" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Airtime section */}
+        {activeCat === "airtime" && (
+          <View style={s.planList}>
+            <Text style={s.sectionLabel}>Quick Top-Up</Text>
+            <View style={s.amtGrid}>
+              {AIRTIME_AMOUNTS.map((amt) => (
+                <TouchableOpacity
+                  key={amt}
+                  style={[s.amtPill, airtimeAmt === amt && s.amtPillActive]}
+                  onPress={() => pickAirtime(amt)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[s.amtPillTxt, airtimeAmt === amt && s.amtPillTxtActive]}>
+                    {amt.toLocaleString()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[s.inputLabel, { paddingHorizontal: 16, marginTop: 14 }]}>Custom Amount</Text>
+            <View style={{ flexDirection: "row", paddingHorizontal: 16, gap: 8, paddingBottom: 16 }}>
+              <TextInput
+                style={[s.input, { flex: 1, marginBottom: 0 }]}
+                placeholder="Enter amount in UGX"
+                placeholderTextColor={MUTED}
+                value={airtimeCustom}
+                onChangeText={setAirtimeCustom}
+                keyboardType="numeric"
+                selectionColor={LIME}
+              />
+              <TouchableOpacity style={s.smallBtn} onPress={tryCustomAirtime} activeOpacity={0.85}>
+                <Text style={s.smallBtnTxt}>Top Up</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Voice / Data section */}
+        {activeCat !== "airtime" && (
+          <View style={s.planList}>
+            <Text style={s.sectionLabel}>
+              {plansLoading ? "Loading bundles…" : `${plans.length} ${activeCat === "voice" ? "Voice" : "Data"} bundle${plans.length === 1 ? "" : "s"}`}
+            </Text>
+            {plansLoading && (
+              <View style={{ padding: 24, alignItems: "center" }}>
+                <ActivityIndicator color={DARK_GREEN} />
+              </View>
+            )}
+            {plansError && !plansLoading ? (
+              <View style={{ padding: 16 }}>
+                <Text style={{ color: "#7A1A1A", fontFamily: "Inter_500Medium", fontSize: 12 }}>{plansError}</Text>
+              </View>
+            ) : null}
+            {!plansLoading && !plansError && plans.length === 0 && (
+              <View style={{ padding: 16 }}>
+                <Text style={{ color: MUTED, fontFamily: "Inter_400Regular", fontSize: 12 }}>
+                  No bundles available for {providerName} right now.
+                </Text>
+              </View>
+            )}
+            {plans.map((p, i) => (
+              <TouchableOpacity
+                key={`${p.code}-${i}`}
+                style={[s.planRow, i < plans.length - 1 && s.planRowBorder]}
+                onPress={() => pickBundle(p)}
+                activeOpacity={0.7}
+              >
+                <View style={s.planLeft}>
+                  <Text style={s.planName} numberOfLines={2}>{p.name}</Text>
                 </View>
-              ) : null}
-            </View>
-            <View style={s.planRight}>
-              <Text style={s.planAmt}>UGX {plan.amount.toLocaleString()}</Text>
-              <View style={s.buyChip}><Text style={s.buyChipTxt}>Buy</Text></View>
-            </View>
-          </TouchableOpacity>
-        ))}
+                <View style={s.planRight}>
+                  <Text style={s.planAmt}>UGX {p.price.toLocaleString()}</Text>
+                  <View style={s.payChip}><Text style={s.payChipTxt}>Buy</Text></View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <ConfirmSheet
         visible={sheetOpen}
         plan={selectedPlan}
-        provider={activeProv}
-        accountNo={accountNo}
+        providerName={providerName}
+        recipient={phone ? formatMsisdn(phone) : ""}
         customerName={customerName}
         loading={loading}
         statusMessage={statusMsg}
@@ -431,7 +467,6 @@ export default function BuyScreen() {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
 const cs = StyleSheet.create({
   hidden:    { display: "none" },
   overlay:   { ...StyleSheet.absoluteFillObject, zIndex: 99, justifyContent: "flex-end" },
@@ -439,13 +474,11 @@ const cs = StyleSheet.create({
   sheet:     { backgroundColor: CARD, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 14 },
   handle:    { width: 40, height: 4, borderRadius: 2, backgroundColor: BORDER, alignSelf: "center", marginBottom: 20 },
   title:     { fontFamily: "Inter_700Bold", fontSize: 18, color: TEXT, marginBottom: 18, textAlign: "center" },
-  summaryCard:     { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: BG, borderRadius: 16, padding: 16, marginBottom: 16 },
-  provBadge:       { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center" },
-  provBadgeTxt:    { fontFamily: "Inter_700Bold", fontSize: 13, color: "#fff" },
-  summaryInfo:     { flex: 1 },
-  summaryName:     { fontFamily: "Inter_600SemiBold", fontSize: 15, color: TEXT, marginBottom: 2 },
+  summaryCard:     { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: BG, borderRadius: 16, padding: 16, marginBottom: 16 },
+  summaryInfo:     { flex: 1, paddingRight: 12 },
+  summaryName:     { fontFamily: "Inter_600SemiBold", fontSize: 14, color: TEXT, marginBottom: 2 },
   summaryDesc:     { fontFamily: "Inter_400Regular", fontSize: 12, color: MUTED },
-  summaryValidity: { fontFamily: "Inter_500Medium", fontSize: 11, color: DARK_GREEN, marginTop: 2 },
+  summaryAmt:      { fontFamily: "Inter_700Bold", fontSize: 16, color: DARK_GREEN },
   detailRow:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: SEP },
   detailRowLast:   { borderBottomWidth: 0, marginBottom: 20 },
   detailLabel:     { fontFamily: "Inter_400Regular", fontSize: 13, color: MUTED },
@@ -468,35 +501,39 @@ const s = StyleSheet.create({
   topBarLabel:  { fontFamily: "Inter_500Medium", fontSize: 11, color: LIME, marginBottom: 3 },
   topBarBalance:{ fontFamily: "Inter_700Bold", fontSize: 22, color: "#fff", letterSpacing: -0.5 },
   catRow:    { flexDirection: "row", paddingHorizontal: 16, gap: 8, marginBottom: 14 },
-  catPill:        { flexDirection: "row", alignItems: "center", flex: 1, justifyContent: "center", paddingHorizontal: 10, paddingVertical: 9, borderRadius: 12, backgroundColor: CARD, borderWidth: 1.5, borderColor: BORDER },
+  catPill:        { flexDirection: "row", alignItems: "center", flex: 1, justifyContent: "center", paddingHorizontal: 6, paddingVertical: 9, borderRadius: 12, backgroundColor: CARD, borderWidth: 1.5, borderColor: BORDER },
   catPillActive:  { backgroundColor: LIME, borderColor: LIME },
-  catLabel:       { fontFamily: "Inter_500Medium", fontSize: 12, color: MUTED },
+  catLabel:       { fontFamily: "Inter_500Medium", fontSize: 11, color: MUTED },
   catLabelActive: { color: DARK_GREEN, fontFamily: "Inter_600SemiBold" },
-  provSwitcher:    { flexDirection: "row", marginHorizontal: 16, marginBottom: 14, backgroundColor: CARD, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: BORDER },
-  provTab:         { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 11, borderRadius: 11 },
-  provTabActive:   { backgroundColor: DARK_GREEN },
-  provDot:         { width: 10, height: 10, borderRadius: 5 },
-  provDotDim:      { opacity: 0.5 },
-  provTabTxt:      { fontFamily: "Inter_500Medium", fontSize: 13, color: MUTED },
-  provTabTxtActive:{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
+  provRow:     { paddingHorizontal: 16, gap: 8, flexDirection: "row" },
+  provChip:        { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: CARD, borderWidth: 1.5, borderColor: BORDER },
+  provChipActive:  { backgroundColor: DARK_GREEN, borderColor: DARK_GREEN },
+  provDot:         { width: 9, height: 9, borderRadius: 5 },
+  provChipTxt:     { fontFamily: "Inter_500Medium", fontSize: 12, color: MUTED },
+  provChipTxtActive: { color: "#fff", fontFamily: "Inter_600SemiBold" },
   inputWrap:  { marginHorizontal: 16, marginBottom: 12 },
   inputLabel: { fontFamily: "Inter_500Medium", fontSize: 11, color: MUTED, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 },
-  input:      { backgroundColor: CARD, borderWidth: 1.5, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, color: TEXT, fontFamily: "Inter_400Regular", fontSize: 14 },
+  input:      { backgroundColor: CARD, borderWidth: 1.5, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, color: TEXT, fontFamily: "Inter_400Regular", fontSize: 14, marginBottom: 4 },
+  helper:     { fontFamily: "Inter_400Regular", fontSize: 11, color: MUTED, marginTop: 4 },
   successBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#DCF8E6", borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 12 },
   successTxt:    { flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, color: DARK_GREEN },
   errorBanner:   { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FCE8E6", borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 12 },
   errorTxt:      { flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, color: "#7A1A1A" },
   sectionLabel:  { fontFamily: "Inter_500Medium", fontSize: 11, color: MUTED, paddingHorizontal: 16, paddingVertical: 10, textTransform: "uppercase", letterSpacing: 0.6 },
-  planList:      { flex: 1, backgroundColor: CARD, marginHorizontal: 16, borderRadius: 18, borderWidth: 1, borderColor: BORDER },
+  planList:      { backgroundColor: CARD, marginHorizontal: 16, borderRadius: 18, borderWidth: 1, borderColor: BORDER },
   planRow:       { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14 },
   planRowBorder: { borderBottomWidth: 1, borderBottomColor: SEP },
   planLeft:      { flex: 1, gap: 3 },
-  planName:      { fontFamily: "Inter_600SemiBold", fontSize: 14, color: TEXT },
-  planDesc:      { fontFamily: "Inter_400Regular", fontSize: 11, color: MUTED },
-  validityChip:  { flexDirection: "row", alignItems: "center", marginTop: 2 },
-  validityTxt:   { fontFamily: "Inter_400Regular", fontSize: 10, color: MUTED },
+  planName:      { fontFamily: "Inter_600SemiBold", fontSize: 13, color: TEXT, lineHeight: 18 },
   planRight:     { alignItems: "flex-end", gap: 6 },
   planAmt:       { fontFamily: "Inter_700Bold", fontSize: 14, color: TEXT },
-  buyChip:       { backgroundColor: LIME, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
-  buyChipTxt:    { fontFamily: "Inter_600SemiBold", fontSize: 11, color: DARK_GREEN },
+  payChip:       { backgroundColor: "#DCF8E6", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
+  payChipTxt:    { fontFamily: "Inter_600SemiBold", fontSize: 11, color: DARK_GREEN },
+  amtGrid:       { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 4 },
+  amtPill:       { paddingHorizontal: 16, paddingVertical: 11, borderRadius: 12, backgroundColor: BG, borderWidth: 1.5, borderColor: BORDER, minWidth: 90, alignItems: "center" },
+  amtPillActive: { backgroundColor: LIME, borderColor: LIME },
+  amtPillTxt:    { fontFamily: "Inter_600SemiBold", fontSize: 13, color: TEXT },
+  amtPillTxtActive: { color: DARK_GREEN, fontFamily: "Inter_700Bold" },
+  smallBtn:      { backgroundColor: DARK_GREEN, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 13, alignItems: "center", justifyContent: "center" },
+  smallBtnTxt:   { fontFamily: "Inter_700Bold", fontSize: 13, color: LIME },
 });
