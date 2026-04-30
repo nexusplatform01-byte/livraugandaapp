@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -14,6 +15,13 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { AppTabBar } from "@/components/AppTabBar";
+import {
+  formatMsisdn,
+  pollRequestStatus,
+  relworxApi,
+} from "@/lib/relworx";
+import { ApiError } from "@/lib/api";
+import { BUY_PRODUCT_CODES } from "@/lib/productCodes";
 
 // ─── Theme ──────────────────────────────────────────────────────────────────
 const DARK_GREEN = "#1A3B2F";
@@ -105,17 +113,20 @@ const PLANS: Record<CatKey, Record<ProvKey, Plan[]>> = {
 
 // ─── Confirm Sheet ────────────────────────────────────────────────────────────
 function ConfirmSheet({
-  visible, plan, provider, accountNo, onConfirm, onCancel,
+  visible, plan, provider, accountNo, customerName,
+  loading, statusMessage, onConfirm, onCancel,
 }: {
   visible: boolean; plan: Plan | null; provider: ProvKey;
-  accountNo: string; onConfirm: () => void; onCancel: () => void;
+  accountNo: string; customerName: string;
+  loading: boolean; statusMessage: string;
+  onConfirm: () => void; onCancel: () => void;
 }) {
   const insets = useSafeAreaInsets();
   if (!plan) return null;
   const prov = PROVIDERS[provider];
   return (
     <View style={[cs.overlay, !visible && cs.hidden]} pointerEvents={visible ? "auto" : "none"}>
-      <Pressable style={cs.backdrop} onPress={onCancel} />
+      <Pressable style={cs.backdrop} onPress={loading ? undefined : onCancel} />
       <View style={[cs.sheet, { paddingBottom: insets.bottom + 24 }]}>
         <View style={cs.handle} />
         <Text style={cs.title}>Confirm Purchase</Text>
@@ -137,15 +148,41 @@ function ConfirmSheet({
           <Text style={cs.detailLabel}>Phone Number</Text>
           <Text style={cs.detailVal}>{accountNo || "—"}</Text>
         </View>
+        {customerName ? (
+          <View style={cs.detailRow}>
+            <Text style={cs.detailLabel}>Recipient</Text>
+            <Text style={cs.detailVal}>{customerName}</Text>
+          </View>
+        ) : null}
         <View style={[cs.detailRow, cs.detailRowLast]}>
           <Text style={cs.detailLabel}>Amount</Text>
           <Text style={cs.detailAmt}>UGX {plan.amount.toLocaleString()}</Text>
         </View>
-        <TouchableOpacity style={cs.confirmBtn} onPress={onConfirm} activeOpacity={0.85}>
-          <Text style={cs.confirmBtnTxt}>Confirm — UGX {plan.amount.toLocaleString()}</Text>
+        {statusMessage ? (
+          <View style={cs.statusBox}>
+            {loading && <ActivityIndicator color={DARK_GREEN} size="small" />}
+            <Text style={cs.statusTxt}>{statusMessage}</Text>
+          </View>
+        ) : null}
+        <TouchableOpacity
+          style={[cs.confirmBtn, loading && cs.confirmBtnDim]}
+          onPress={loading ? undefined : onConfirm}
+          activeOpacity={loading ? 1 : 0.85}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={DARK_GREEN} />
+          ) : (
+            <Text style={cs.confirmBtnTxt}>Confirm — UGX {plan.amount.toLocaleString()}</Text>
+          )}
         </TouchableOpacity>
-        <TouchableOpacity style={cs.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
-          <Text style={cs.cancelBtnTxt}>Cancel</Text>
+        <TouchableOpacity
+          style={cs.cancelBtn}
+          onPress={loading ? undefined : onCancel}
+          activeOpacity={0.7}
+          disabled={loading}
+        >
+          <Text style={cs.cancelBtnTxt}>{loading ? "Please wait…" : "Cancel"}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -153,8 +190,6 @@ function ConfirmSheet({
 }
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
-const INITIAL_BALANCE = 209891;
-
 export default function BuyScreen() {
   const insets = useSafeAreaInsets();
   const [activeCat,    setActiveCat]    = useState<CatKey>("airtime");
@@ -162,25 +197,93 @@ export default function BuyScreen() {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [accountNo,    setAccountNo]    = useState("");
   const [sheetOpen,    setSheetOpen]    = useState(false);
-  const [balance,      setBalance]      = useState(INITIAL_BALANCE);
+  const [balance,      setBalance]      = useState<number | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(true);
   const [successPlan,  setSuccessPlan]  = useState<Plan | null>(null);
+  const [errorMsg,     setErrorMsg]     = useState("");
+  const [loading,      setLoading]      = useState(false);
+  const [statusMsg,    setStatusMsg]    = useState("");
+  const [customerName, setCustomerName] = useState("");
 
   const plans = PLANS[activeCat][activeProv];
 
+  async function refreshBalance() {
+    setBalanceLoading(true);
+    try {
+      const res = await relworxApi.walletBalance("UGX");
+      setBalance(res.balance);
+    } catch {
+      setBalance(null);
+    } finally {
+      setBalanceLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshBalance();
+  }, []);
+
   function selectPlan(plan: Plan) {
+    if (!accountNo || accountNo.replace(/\D/g, "").length < 9) {
+      setErrorMsg("Enter a phone number first.");
+      return;
+    }
     Haptics.selectionAsync();
+    setErrorMsg("");
+    setStatusMsg("");
+    setCustomerName("");
     setSelectedPlan(plan);
     setSheetOpen(true);
   }
 
-  function handleConfirm() {
-    if (!selectedPlan) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setBalance((b) => b - selectedPlan.amount);
-    setSuccessPlan(selectedPlan);
-    setSelectedPlan(null);
-    setSheetOpen(false);
-    setAccountNo("");
+  async function handleConfirm() {
+    if (!selectedPlan || loading) return;
+    const productCode = BUY_PRODUCT_CODES[activeCat][activeProv];
+    if (!productCode) {
+      setErrorMsg("This provider isn't supported yet.");
+      setSheetOpen(false);
+      return;
+    }
+    const msisdn = formatMsisdn(accountNo);
+    setLoading(true);
+    setStatusMsg("Validating…");
+    try {
+      const v = await relworxApi.validateProduct({
+        msisdn,
+        amount: selectedPlan.amount,
+        product_code: productCode,
+        contact_phone: msisdn,
+      });
+      if (v.customer_name) setCustomerName(v.customer_name);
+      setStatusMsg("Processing payment…");
+      const p = await relworxApi.purchaseProduct(v.validation_reference);
+      setStatusMsg("Confirming with the network…");
+      const final = await pollRequestStatus(p.internal_reference, {
+        timeoutMs: 45000,
+      });
+      const ok = (final.status ?? "").toLowerCase() === "success";
+      if (ok) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setSuccessPlan(selectedPlan);
+        setSelectedPlan(null);
+        setSheetOpen(false);
+        setAccountNo("");
+        setStatusMsg("");
+        refreshBalance();
+      } else {
+        setStatusMsg(final.message || "Still processing — check Transactions.");
+        // leave the sheet open so the user sees the status
+      }
+    } catch (e) {
+      const msg =
+        e instanceof ApiError ? e.message : "Purchase failed. Please try again.";
+      setErrorMsg(msg);
+      setStatusMsg("");
+      setSheetOpen(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const catLabel = CATS.find((c) => c.key === activeCat)?.label ?? "Airtime";
@@ -193,8 +296,14 @@ export default function BuyScreen() {
           <Feather name="arrow-left" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={s.topBarCenter}>
-          <Text style={s.topBarLabel}>Your Wallet Balance</Text>
-          <Text style={s.topBarBalance}>UGX {balance.toLocaleString()}</Text>
+          <Text style={s.topBarLabel}>Wallet Balance (Relworx)</Text>
+          {balanceLoading ? (
+            <ActivityIndicator color="#fff" size="small" style={{ marginTop: 4 }} />
+          ) : (
+            <Text style={s.topBarBalance}>
+              {balance == null ? "UGX —" : `UGX ${balance.toLocaleString()}`}
+            </Text>
+          )}
         </View>
         <View style={{ width: 38 }} />
       </View>
@@ -262,6 +371,17 @@ export default function BuyScreen() {
         </View>
       )}
 
+      {/* ── Error Banner ── */}
+      {!!errorMsg && (
+        <View style={s.errorBanner}>
+          <Feather name="alert-circle" size={16} color="#7A1A1A" />
+          <Text style={s.errorTxt}>{errorMsg}</Text>
+          <TouchableOpacity onPress={() => setErrorMsg("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Feather name="x" size={14} color="#7A1A1A" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* ── Plans List ── */}
       <ScrollView
         style={s.planList}
@@ -300,8 +420,11 @@ export default function BuyScreen() {
         plan={selectedPlan}
         provider={activeProv}
         accountNo={accountNo}
+        customerName={customerName}
+        loading={loading}
+        statusMessage={statusMsg}
         onConfirm={handleConfirm}
-        onCancel={() => setSheetOpen(false)}
+        onCancel={() => { setSheetOpen(false); setStatusMsg(""); }}
       />
       <AppTabBar activeTab="" />
     </View>
@@ -329,9 +452,12 @@ const cs = StyleSheet.create({
   detailVal:       { fontFamily: "Inter_500Medium", fontSize: 13, color: TEXT },
   detailAmt:       { fontFamily: "Inter_700Bold", fontSize: 16, color: DARK_GREEN },
   confirmBtn:      { backgroundColor: LIME, borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 10 },
+  confirmBtnDim:   { opacity: 0.6 },
   confirmBtnTxt:   { fontFamily: "Inter_700Bold", fontSize: 16, color: DARK_GREEN },
   cancelBtn:       { paddingVertical: 12, alignItems: "center" },
   cancelBtnTxt:    { fontFamily: "Inter_500Medium", fontSize: 14, color: MUTED },
+  statusBox:       { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F0F4F0", borderRadius: 12, padding: 12, marginBottom: 12 },
+  statusTxt:       { flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, color: DARK_GREEN },
 });
 
 const s = StyleSheet.create({
@@ -358,6 +484,8 @@ const s = StyleSheet.create({
   input:      { backgroundColor: CARD, borderWidth: 1.5, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, color: TEXT, fontFamily: "Inter_400Regular", fontSize: 14 },
   successBanner: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#DCF8E6", borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 12 },
   successTxt:    { flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, color: DARK_GREEN },
+  errorBanner:   { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FCE8E6", borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 12 },
+  errorTxt:      { flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, color: "#7A1A1A" },
   sectionLabel:  { fontFamily: "Inter_500Medium", fontSize: 11, color: MUTED, paddingHorizontal: 16, paddingVertical: 10, textTransform: "uppercase", letterSpacing: 0.6 },
   planList:      { flex: 1, backgroundColor: CARD, marginHorizontal: 16, borderRadius: 18, borderWidth: 1, borderColor: BORDER },
   planRow:       { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14 },

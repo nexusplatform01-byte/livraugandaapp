@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +15,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { BankIcon } from "@/components/QuickActionIcons";
+import { formatMsisdn, pollRequestStatus, relworxApi } from "@/lib/relworx";
+import { ApiError } from "@/lib/api";
 
 const DARK_GREEN = "#1A3B2F";
 const LIME = "#C6F135";
@@ -196,21 +199,27 @@ function LivraField({
   );
 }
 
-function FormFields({ type }: { type: SendType }) {
-  const [phone, setPhone]         = useState("");
-  const [network, setNetwork]     = useState("");
-  const [bank, setBank]           = useState("");
-  const [accNum, setAccNum]       = useState("");
-  const [merchant, setMerchant]   = useState("");
-  const [amount, setAmount]       = useState("");
-  const [note, setNote]           = useState("");
-  const [hidePayment, setHidePayment] = useState(false);
-
+function FormFields({
+  type, phone, setPhone, network, setNetwork,
+  bank, setBank, accNum, setAccNum,
+  merchant, setMerchant, amount, setAmount, note, setNote,
+  hidePayment, setHidePayment,
+}: {
+  type: SendType;
+  phone: string; setPhone: (v: string) => void;
+  network: string; setNetwork: (v: string) => void;
+  bank: string; setBank: (v: string) => void;
+  accNum: string; setAccNum: (v: string) => void;
+  merchant: string; setMerchant: (v: string) => void;
+  amount: string; setAmount: (v: string) => void;
+  note: string; setNote: (v: string) => void;
+  hidePayment: boolean; setHidePayment: (v: boolean) => void;
+}) {
   if (!type) return null;
   return (
     <View style={styles.formCard}>
       {type === "mobile" && <>
-        <Field label="Phone Number" placeholder="0801 234 5678" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+        <Field label="Recipient Phone" placeholder="0701 454 887" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
         <Text style={fs.label}>Network</Text>
         <ChipRow items={NETWORKS} selected={network} onSelect={setNetwork} />
       </>}
@@ -236,14 +245,106 @@ export default function SendScreen() {
   const [selected, setSelected] = useState<SendType>(null);
   const label = OPTIONS.find((o) => o.key === selected)?.label ?? "";
 
+  // Lifted form state
+  const [phone, setPhone]       = useState("");
+  const [network, setNetwork]   = useState("");
+  const [bank, setBank]         = useState("");
+  const [accNum, setAccNum]     = useState("");
+  const [merchant, setMerchant] = useState("");
+  const [amount, setAmount]     = useState("");
+  const [note, setNote]         = useState("");
+  const [hidePayment, setHidePayment] = useState(false);
+
+  const [sending, setSending] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [balanceLoading, setBalanceLoading] = useState(true);
+
+  async function refreshBalance() {
+    setBalanceLoading(true);
+    try {
+      const res = await relworxApi.walletBalance("UGX");
+      setWalletBalance(res.balance);
+    } catch {
+      setWalletBalance(null);
+    } finally {
+      setBalanceLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshBalance();
+  }, []);
+
+  function resetForm() {
+    setPhone(""); setNetwork(""); setBank(""); setAccNum("");
+    setMerchant(""); setAmount(""); setNote(""); setSelected(null);
+  }
+
+  async function handleConfirm() {
+    if (!selected || sending) return;
+
+    if (selected !== "mobile") {
+      Alert.alert(
+        "Coming soon",
+        `${label} transfers aren't available through Relworx yet. Mobile Money is fully wired.`,
+      );
+      return;
+    }
+
+    if (!phone || phone.replace(/\D/g, "").length < 9) {
+      Alert.alert("Phone Number", "Enter a valid recipient phone number.");
+      return;
+    }
+    const amt = Number((amount || "").replace(/[^0-9.]/g, ""));
+    if (!amt || amt <= 0) {
+      Alert.alert("Amount", "Enter a valid amount in UGX.");
+      return;
+    }
+
+    setSending(true);
+    try {
+      const msisdn = formatMsisdn(phone);
+      const res = await relworxApi.sendPayment({
+        msisdn,
+        currency: "UGX",
+        amount: amt,
+        ...(note ? { description: note } : {}),
+      });
+      const final = await pollRequestStatus(res.internal_reference, {
+        timeoutMs: 60000,
+      });
+      const ok = (final.status ?? "").toLowerCase() === "success";
+      Alert.alert(
+        ok ? "Sent" : "Pending",
+        ok
+          ? `UGX ${amt.toLocaleString()} sent to ${msisdn}.`
+          : final.message || "Transfer is still processing.",
+      );
+      if (ok) resetForm();
+      refreshBalance();
+    } catch (e) {
+      const msg =
+        e instanceof ApiError ? e.message : "Transfer failed. Please try again.";
+      Alert.alert("Transfer Failed", msg);
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={styles.root}>
 
         <View style={[styles.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
           <View style={styles.topBarCenter}>
-            <Text style={styles.topBarLabel}>Your Wallet Balance</Text>
-            <Text style={styles.topBarBalance}>UGX 209,891</Text>
+            <Text style={styles.topBarLabel}>Relworx Wallet Balance</Text>
+            {balanceLoading ? (
+              <ActivityIndicator color="#fff" size="small" style={{ marginTop: 4 }} />
+            ) : (
+              <Text style={styles.topBarBalance}>
+                {walletBalance == null ? "UGX —" : `UGX ${walletBalance.toLocaleString()}`}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -277,16 +378,31 @@ export default function SendScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <FormFields type={selected} />
+          <FormFields
+            type={selected}
+            phone={phone} setPhone={setPhone}
+            network={network} setNetwork={setNetwork}
+            bank={bank} setBank={setBank}
+            accNum={accNum} setAccNum={setAccNum}
+            merchant={merchant} setMerchant={setMerchant}
+            amount={amount} setAmount={setAmount}
+            note={note} setNote={setNote}
+            hidePayment={hidePayment} setHidePayment={setHidePayment}
+          />
           <View style={styles.bottomBar}>
             <TouchableOpacity
-              style={[styles.confirmBtn, !selected && styles.confirmBtnOff]}
-              activeOpacity={selected ? 0.85 : 1}
-              onPress={() => selected && Alert.alert("Confirm", `Confirm ${label} transfer?`)}
+              style={[styles.confirmBtn, (!selected || sending) && styles.confirmBtnOff]}
+              activeOpacity={selected && !sending ? 0.85 : 1}
+              onPress={handleConfirm}
+              disabled={!selected || sending}
             >
-              <Text style={[styles.confirmText, !selected && styles.confirmTextOff]}>
-                Confirm Payment
-              </Text>
+              {sending ? (
+                <ActivityIndicator color={LIME} />
+              ) : (
+                <Text style={[styles.confirmText, !selected && styles.confirmTextOff]}>
+                  Confirm Payment
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </ScrollView>
