@@ -6,7 +6,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { router, Stack, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -14,20 +14,61 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AuthProvider, useAuth } from "@/lib/authContext";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
+function AuthGate() {
+  const { user, loading, hasPinSet, pinVerified } = useAuth();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (loading) return;
+    const inAuth   = segments[0] === "auth";
+    const inSplash = segments[0] === "splash";
+    const inTabs   = segments[0] === "(tabs)";
+
+    if (inSplash) return;
+
+    if (!user) {
+      if (!inAuth) router.replace("/auth");
+      return;
+    }
+    if (!hasPinSet) {
+      if (!(inAuth && segments[1] === "pin")) {
+        router.replace("/auth/pin?mode=setup");
+      }
+      return;
+    }
+    if (!pinVerified) {
+      if (!(inAuth && segments[1] === "pin")) {
+        router.replace("/auth/pin?mode=verify");
+      }
+      return;
+    }
+    if (inAuth) {
+      router.replace("/(tabs)");
+    }
+  }, [user, loading, hasPinSet, pinVerified, segments]);
+
+  return null;
+}
+
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="buy" />
-      <Stack.Screen name="pay" />
-      <Stack.Screen name="bank" />
-    </Stack>
+    <>
+      <AuthGate />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="splash"   />
+        <Stack.Screen name="auth"     />
+        <Stack.Screen name="(tabs)"   />
+        <Stack.Screen name="buy"      />
+        <Stack.Screen name="pay"      />
+        <Stack.Screen name="bank"     />
+      </Stack>
+    </>
   );
 }
 
@@ -50,13 +91,15 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView>
-            <KeyboardProvider>
-              <RootLayoutNav />
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </QueryClientProvider>
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <GestureHandlerRootView>
+              <KeyboardProvider>
+                <RootLayoutNav />
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+          </QueryClientProvider>
+        </AuthProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );

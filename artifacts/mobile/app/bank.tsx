@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -15,11 +15,11 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { AppTabBar } from "@/components/AppTabBar";
-import { BANK_TRANSFER_CODES } from "@/lib/productCodes";
 import {
   formatMsisdn,
   pollRequestStatus,
   relworxApi,
+  type ProductSummary,
 } from "@/lib/relworx";
 import { ApiError } from "@/lib/api";
 import { setUserPhone } from "@/lib/userSession";
@@ -35,46 +35,58 @@ const SEP        = "#F0F4F0";
 
 const LOCAL_BALANCE = 209891;
 
-interface Bank {
-  id: string;
+/** Turn a code like STANBIC_BANK_UGANDA_TRANSFER into initials STB */
+function codeToInitials(name: string): string {
+  return name
+    .split(/[\s_]+/)
+    .filter((w) => w.length > 2 && !["BANK","UGANDA","LTD","LIMITED","AND","OF","FOR"].includes(w.toUpperCase()))
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 3);
+}
+
+const BANK_COLORS = [
+  "#003A7A","#CC0000","#005500","#FF6600","#003366","#CC6600",
+  "#006633","#1A1A1A","#993300","#006699","#CC0033","#1A4D8C",
+  "#0061A1","#CC9900","#0033CC","#FF6600","#003399","#003A7A",
+  "#660099","#1A6B4A","#CC4400","#0099CC","#33AA66","#8833AA",
+];
+let colorIdx = 0;
+function pickColor(): string {
+  return BANK_COLORS[colorIdx++ % BANK_COLORS.length];
+}
+
+interface BankEntry {
+  product_code: string;
   name: string;
   initials: string;
   color: string;
-  productCode: string;
 }
 
-const BANKS: Bank[] = [
-  { id: "stanbic",     name: "Stanbic Bank",                 initials: "STB", color: "#003A7A", productCode: BANK_TRANSFER_CODES.stanbic },
-  { id: "absa",        name: "Absa Bank",                    initials: "ABS", color: "#CC0000", productCode: BANK_TRANSFER_CODES.absa },
-  { id: "centenary",   name: "Centenary Bank",               initials: "CEN", color: "#005500", productCode: BANK_TRANSFER_CODES.centenary },
-  { id: "dfcu",        name: "DFCU Bank",                    initials: "DFC", color: "#FF6600", productCode: BANK_TRANSFER_CODES.dfcu },
-  { id: "equity",      name: "Equity Bank",                  initials: "EQB", color: "#CC0000", productCode: BANK_TRANSFER_CODES.equity },
-  { id: "housing",     name: "Housing Finance",              initials: "HFB", color: "#003366", productCode: BANK_TRANSFER_CODES.housing },
-  { id: "kcb",         name: "KCB Bank",                     initials: "KCB", color: "#006633", productCode: BANK_TRANSFER_CODES.kcb },
-  { id: "ncba",        name: "NCBA Bank",                    initials: "NCB", color: "#1A1A1A", productCode: BANK_TRANSFER_CODES.ncba },
-  { id: "postbank",    name: "PostBank Uganda",              initials: "PBU", color: "#CC6600", productCode: BANK_TRANSFER_CODES.postbank },
-  { id: "tropical",    name: "Tropical Bank",                initials: "TRB", color: "#006699", productCode: BANK_TRANSFER_CODES.tropical },
-  { id: "uba",         name: "UBA Uganda",                   initials: "UBA", color: "#CC0033", productCode: BANK_TRANSFER_CODES.uba },
-  { id: "diamond",     name: "Diamond Trust Bank",           initials: "DTB", color: "#1A4D8C", productCode: BANK_TRANSFER_CODES.diamond },
-  { id: "ecobank",     name: "EcoBank Uganda",               initials: "ECO", color: "#0061A1", productCode: BANK_TRANSFER_CODES.ecobank },
-  { id: "exim",        name: "Exim Bank Uganda",             initials: "EXM", color: "#CC9900", productCode: BANK_TRANSFER_CODES.exim },
-  { id: "africa",      name: "Bank of Africa",               initials: "BOA", color: "#0033CC", productCode: BANK_TRANSFER_CODES.africa },
-  { id: "baroda",      name: "Bank of Baroda",               initials: "BOB", color: "#FF6600", productCode: BANK_TRANSFER_CODES.baroda },
-  { id: "india",       name: "Bank of India",                initials: "BOI", color: "#003399", productCode: BANK_TRANSFER_CODES.india },
-  { id: "citi",        name: "Citibank Uganda",              initials: "CIT", color: "#003A7A", productCode: BANK_TRANSFER_CODES.citi },
-  { id: "guaranty",    name: "Guaranty Trust Bank",          initials: "GTB", color: "#FF6600", productCode: BANK_TRANSFER_CODES.guaranty },
-  { id: "abc",         name: "ABC Capital Bank",             initials: "ABC", color: "#1A1A1A", productCode: BANK_TRANSFER_CODES.abc },
-  { id: "cairo",       name: "Cairo International Bank",     initials: "CIB", color: "#993300", productCode: BANK_TRANSFER_CODES.cairo },
-  { id: "opportunity", name: "Opportunity Bank",             initials: "OPP", color: "#0099CC", productCode: BANK_TRANSFER_CODES.opportunity },
-  { id: "topfinance",  name: "Top Finance Bank",             initials: "TFB", color: "#660099", productCode: BANK_TRANSFER_CODES.topfinance },
-  { id: "standard",    name: "Standard Chartered Bank",      initials: "SCB", color: "#003366", productCode: BANK_TRANSFER_CODES.standard },
-];
+function buildBanks(products: ProductSummary[]): BankEntry[] {
+  colorIdx = 0;
+  return products
+    .filter((p) => p.category === "BANK_TRANSFERS")
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((p) => ({
+      product_code: p.code,
+      name: p.name
+        .replace(" Uganda Ltd Transfer", "")
+        .replace(" Uganda Ltd", "")
+        .replace(" Uganda", "")
+        .replace(" Transfer", "")
+        .trim(),
+      initials: codeToInitials(p.name),
+      color: pickColor(),
+    }));
+}
 
 function BankSelector({
-  visible, selected, onSelect, onClose,
+  visible, banks, loading: banksLoading, selected, onSelect, onClose,
 }: {
-  visible: boolean; selected: Bank | null;
-  onSelect: (b: Bank) => void; onClose: () => void;
+  visible: boolean; banks: BankEntry[]; loading: boolean;
+  selected: BankEntry | null; onSelect: (b: BankEntry) => void; onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
   if (!visible) return null;
@@ -84,25 +96,34 @@ function BankSelector({
       <View style={[bs.sheet, { paddingBottom: insets.bottom + 16 }]}>
         <View style={bs.handle} />
         <Text style={bs.title}>Select Bank</Text>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {BANKS.map((bank) => {
-            const active = selected?.id === bank.id;
-            return (
-              <TouchableOpacity
-                key={bank.id}
-                style={[bs.bankRow, active && bs.bankRowActive]}
-                onPress={() => { Haptics.selectionAsync(); onSelect(bank); onClose(); }}
-                activeOpacity={0.7}
-              >
-                <View style={[bs.bankLogo, { backgroundColor: bank.color }]}>
-                  <Text style={bs.bankInitials}>{bank.initials}</Text>
-                </View>
-                <Text style={[bs.bankName, active && bs.bankNameActive]}>{bank.name}</Text>
-                {active && <Feather name="check-circle" size={18} color={DARK_GREEN} />}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        {banksLoading ? (
+          <View style={{ padding: 32, alignItems: "center" }}>
+            <ActivityIndicator color={DARK_GREEN} />
+            <Text style={{ marginTop: 10, color: MUTED, fontFamily: "Inter_400Regular", fontSize: 13 }}>
+              Fetching banks from Relworx…
+            </Text>
+          </View>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {banks.map((bank) => {
+              const active = selected?.product_code === bank.product_code;
+              return (
+                <TouchableOpacity
+                  key={bank.product_code}
+                  style={[bs.bankRow, active && bs.bankRowActive]}
+                  onPress={() => { Haptics.selectionAsync(); onSelect(bank); onClose(); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[bs.bankLogo, { backgroundColor: bank.color }]}>
+                    <Text style={bs.bankInitials}>{bank.initials}</Text>
+                  </View>
+                  <Text style={[bs.bankName, active && bs.bankNameActive]}>{bank.name}</Text>
+                  {active && <Feather name="check-circle" size={18} color={DARK_GREEN} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
       </View>
     </View>
   );
@@ -112,7 +133,7 @@ function ConfirmSheet({
   visible, bank, accountNo, depositorName, payerPhone, amount, note,
   loading, statusMessage, onConfirm, onCancel,
 }: {
-  visible: boolean; bank: Bank | null; accountNo: string; depositorName: string;
+  visible: boolean; bank: BankEntry | null; accountNo: string; depositorName: string;
   payerPhone: string; amount: string; note: string;
   loading: boolean; statusMessage: string;
   onConfirm: () => void; onCancel: () => void;
@@ -181,7 +202,9 @@ function ConfirmSheet({
 
 export default function BankScreen() {
   const insets = useSafeAreaInsets();
-  const [selectedBank,  setSelectedBank]  = useState<Bank | null>(null);
+  const [banks, setBanks]           = useState<BankEntry[]>([]);
+  const [banksLoading, setBanksLoading] = useState(true);
+  const [selectedBank,  setSelectedBank]  = useState<BankEntry | null>(null);
   const [bankModalOpen, setBankModalOpen] = useState(false);
   const [accountNo,     setAccountNo]     = useState("");
   const [depositorName, setDepositorName] = useState("");
@@ -194,13 +217,27 @@ export default function BankScreen() {
   const [errorMsg,      setErrorMsg]      = useState("");
   const [successMsg,    setSuccessMsg]    = useState("");
 
+  // Fetch real banks from Relworx
+  useEffect(() => {
+    (async () => {
+      setBanksLoading(true);
+      try {
+        const res = await relworxApi.products();
+        setBanks(buildBanks(res.products));
+      } catch {
+        setBanks([]);
+      } finally {
+        setBanksLoading(false);
+      }
+    })();
+  }, []);
+
   function openConfirm() {
     if (!selectedBank)         { setErrorMsg("Please select a bank."); return; }
     if (accountNo.length < 6)  { setErrorMsg("Enter a valid account number."); return; }
     if (!depositorName.trim()) { setErrorMsg("Enter the beneficiary / depositor name."); return; }
     if (!payerPhone || payerPhone.replace(/\D/g, "").length < 9) {
-      setErrorMsg("Enter the mobile-money phone you'll pay with.");
-      return;
+      setErrorMsg("Enter the mobile-money phone you'll pay with."); return;
     }
     const num = Number(amount.replace(/,/g, ""));
     if (!num || num <= 0)      { setErrorMsg("Enter a valid transfer amount."); return; }
@@ -212,7 +249,7 @@ export default function BankScreen() {
 
   async function handleConfirm() {
     if (!selectedBank || loading) return;
-    const num = Number(amount.replace(/,/g, ""));
+    const num    = Number(amount.replace(/,/g, ""));
     const msisdn = formatMsisdn(payerPhone);
     setUserPhone(msisdn).catch(() => {});
     setLoading(true);
@@ -221,7 +258,7 @@ export default function BankScreen() {
       const v = await relworxApi.validateProduct({
         msisdn,
         amount: num,
-        product_code: selectedBank.productCode,
+        product_code: selectedBank.product_code,
         contact_phone: msisdn,
         account_number: accountNo,
         depositor_name: depositorName,
@@ -311,8 +348,15 @@ export default function BankScreen() {
                 </View>
                 <Text style={s.bankPickerName}>{selectedBank.name}</Text>
               </View>
+            ) : banksLoading ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                <ActivityIndicator color={MUTED} size="small" />
+                <Text style={s.bankPickerPlaceholder}>Loading banks from Relworx…</Text>
+              </View>
             ) : (
-              <Text style={s.bankPickerPlaceholder}>Choose a bank...</Text>
+              <Text style={s.bankPickerPlaceholder}>
+                {banks.length ? "Choose a bank…" : "Could not load banks"}
+              </Text>
             )}
             <Feather name="chevron-down" size={18} color={MUTED} />
           </TouchableOpacity>
@@ -366,7 +410,7 @@ export default function BankScreen() {
           </View>
 
           <View style={s.quickAmts}>
-            {["10,000", "50,000", "100,000", "200,000"].map((v) => (
+            {["10,000","50,000","100,000","200,000"].map((v) => (
               <TouchableOpacity
                 key={v}
                 style={[s.quickAmt, amount === v && s.quickAmtActive]}
@@ -390,7 +434,7 @@ export default function BankScreen() {
         </View>
       </ScrollView>
 
-      <View style={[s.footer, { paddingBottom: 0 }]}>
+      <View style={[s.footer]}>
         <TouchableOpacity
           style={[s.transferBtn, !canTransfer && s.transferBtnDim]}
           onPress={openConfirm}
@@ -398,13 +442,15 @@ export default function BankScreen() {
         >
           <Feather name="send" size={16} color={DARK_GREEN} style={{ marginRight: 8 }} />
           <Text style={s.transferBtnTxt}>
-            {amount ? `Send UGX ${Number((amount || "0").replace(/,/g, "")).toLocaleString()}` : "Send Money"}
+            {amount ? `Send UGX ${Number((amount||"0").replace(/,/g,"")).toLocaleString()}` : "Send Money"}
           </Text>
         </TouchableOpacity>
       </View>
 
       <BankSelector
         visible={bankModalOpen}
+        banks={banks}
+        loading={banksLoading}
         selected={selectedBank}
         onSelect={setSelectedBank}
         onClose={() => setBankModalOpen(false)}
@@ -430,7 +476,7 @@ export default function BankScreen() {
 const bs = StyleSheet.create({
   overlay:      { ...StyleSheet.absoluteFillObject, zIndex: 99, justifyContent: "flex-end" },
   backdrop:     { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
-  sheet:        { backgroundColor: CARD, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 14, maxHeight: "75%" },
+  sheet:        { backgroundColor: CARD, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 14, maxHeight: "78%" },
   handle:       { width: 40, height: 4, borderRadius: 2, backgroundColor: BORDER, alignSelf: "center", marginBottom: 16 },
   title:        { fontFamily: "Inter_700Bold", fontSize: 18, color: TEXT, marginBottom: 16, textAlign: "center" },
   bankRow:      { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: SEP },

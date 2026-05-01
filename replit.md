@@ -1,8 +1,35 @@
-# Workspace
+# Workspace — FinWallet
 
 ## Overview
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+
+## FinWallet Mobile App
+
+Expo (React Native) wallet app at `artifacts/mobile/`. Connects to Railway-hosted Relworx backend.
+
+### Architecture
+- **Backend URL**: `https://function-bun-production-37b5.up.railway.app` (Railway, auto-selected)
+- **Auth**: Firebase phone auth (project: `livra-platform`) + 4-digit PIN (AsyncStorage)
+- **Balance**: Hardcoded `LOCAL_BALANCE = 209891 UGX` (never fetched from Relworx)
+- **Customer reference**: Firebase UID-based prefix via `lib/userSession.ts`
+
+### Auth Flow
+1. `app/auth/index.tsx` — phone entry (Uganda +256), fires Firebase `signInWithPhoneNumber`
+2. `app/auth/otp.tsx` — 6-digit OTP verification with 60s resend countdown
+3. `app/auth/pin.tsx` — 4-digit PIN numpad (mode=setup on first login, mode=verify on return)
+4. `AuthGate` in `app/_layout.tsx` — redirects based on `user / hasPinSet / pinVerified`
+
+### Key Files
+- `lib/firebase.ts` — Firebase app + auth (web/native branching)
+- `lib/authContext.tsx` — `AuthProvider` with `sendOtp/confirmOtp/setupPin/verifyPin/signOut`
+- `lib/relworx.ts` — All Relworx API calls (products, validate, purchase, poll status)
+- `lib/api.ts` — `apiFetch` wrapper pointing to Railway backend
+- `lib/userSession.ts` — Firebase UID → customer_reference prefix
+- `app/bank.tsx` — Bank transfer; fetches real bank list from `/api/products` (BANK_TRANSFERS)
+- `app/buy.tsx` — Airtime/data purchase
+- `app/pay.tsx` — Utility payments
+- `app/splash.tsx` — Animated splash screen
 
 ## Stack
 

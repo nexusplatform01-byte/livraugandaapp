@@ -114,12 +114,9 @@ interface ProductBaseFields {
   product_code: string;
   contact_phone?: string;
   reference?: string;
-  /** TV / utility account / smart card / IUC / meter number */
   account_no?: string;
   meter_number?: string;
-  /** NWSC service area id (from choice-list). */
   location_id?: string;
-  /** Bank transfer beneficiary fields */
   account_number?: string;
   depositor_name?: string;
   beneficiary_name?: string;
@@ -164,7 +161,7 @@ export const relworxApi = {
     });
   },
 
-  /** You pay a customer (payout). */
+  /** You pay a customer (payout / withdraw). */
   withdraw: async (input: {
     msisdn: string;
     amount: number;
@@ -227,24 +224,43 @@ export const relworxApi = {
     }),
 };
 
-/** Poll the request-status endpoint until it leaves the pending state. */
+const TERMINAL_STATUSES = new Set(["success", "failed", "error", "cancelled", "reversed"]);
+
+/** Returns true if the error message indicates the record doesn't exist (treat as terminal). */
+function isTerminalError(e: unknown): boolean {
+  const msg = ((e as any)?.message || "").toLowerCase();
+  return (
+    msg.includes("record not found") ||
+    msg.includes("not found") ||
+    msg.includes("invalid parameter")
+  );
+}
+
+/** Poll the /api/request-status endpoint until it leaves the pending state. */
 export async function pollRequestStatus(
   internalReference: string,
   opts: { intervalMs?: number; timeoutMs?: number } = {},
 ): Promise<RequestStatusResponse> {
   const interval = opts.intervalMs ?? 3000;
-  const timeout = opts.timeoutMs ?? 60000;
-  const started = Date.now();
+  const timeout  = opts.timeoutMs  ?? 60000;
+  const started  = Date.now();
   let last: RequestStatusResponse | null = null;
+
   while (Date.now() - started < timeout) {
     try {
       last = await relworxApi.requestStatus(internalReference);
       const s = (last.status ?? "").toLowerCase();
-      if (s && s !== "pending" && s !== "processing") return last;
-    } catch {
-      // keep polling
+      if (s && TERMINAL_STATUSES.has(s)) return last;
+      // Still pending/processing — keep polling
+    } catch (e) {
+      // If the error means the record doesn't exist, stop polling
+      if (isTerminalError(e)) {
+        return { success: false, status: "pending", message: "Transaction status unavailable." };
+      }
+      // Other errors: wait and retry
     }
     await new Promise((r) => setTimeout(r, interval));
   }
-  return last ?? { success: true, status: "pending", message: "Still processing" };
+
+  return last ?? { success: true, status: "pending", message: "Still processing — check Transactions." };
 }
