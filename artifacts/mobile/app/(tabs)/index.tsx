@@ -23,7 +23,7 @@ import {
   type FsTx,
 } from "@/lib/firestore";
 
-const NAVY = "#0A1628";
+const NAVY = "#1A3B2F";
 const GOLD = "#C9A84C";
 
 function formatTimestamp(ts: any): string {

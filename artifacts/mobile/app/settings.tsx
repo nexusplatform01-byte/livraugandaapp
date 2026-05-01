@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import {
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -13,12 +15,13 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/lib/authContext";
 
-const NAVY = "#0A1628";
-const NAVY2 = "#0F1E36";
-const NAVY3 = "#162440";
-const GOLD = "#C9A84C";
-const MUTED = "rgba(255,255,255,0.5)";
-const BORDER = "rgba(255,255,255,0.08)";
+const BG       = "#F2F4F2";
+const GREEN    = "#1A3B2F";
+const GREEN2   = "#22503E";
+const LIME     = "#C6F135";
+const MUTED    = "rgba(255,255,255,0.5)";
+const BORDER   = "rgba(255,255,255,0.1)";
+const CARD_BG  = "#243D30";
 
 interface RowProps {
   icon: string;
@@ -29,7 +32,7 @@ interface RowProps {
   danger?: boolean;
 }
 
-function SettingRow({ icon, label, value, color = GOLD, onPress, danger }: RowProps) {
+function SettingRow({ icon, label, value, color = LIME, onPress, danger }: RowProps) {
   return (
     <TouchableOpacity
       style={s.row}
@@ -54,10 +57,137 @@ function SettingRow({ icon, label, value, color = GOLD, onPress, danger }: RowPr
   );
 }
 
+function EditNameModal({
+  visible, currentName, onSave, onClose,
+}: {
+  visible: boolean; currentName: string;
+  onSave: (name: string) => void; onClose: () => void;
+}) {
+  const [name, setName] = useState(currentName);
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={m.overlay}>
+        <TouchableOpacity style={m.backdrop} activeOpacity={1} onPress={onClose} />
+        <View style={m.sheet}>
+          <View style={m.handle} />
+          <Text style={m.title}>Edit Full Name</Text>
+          <Text style={m.subtitle}>This name is displayed on your profile.</Text>
+          <TextInput
+            style={m.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Your full name"
+            placeholderTextColor="#7A9A7A"
+            autoFocus
+            autoCapitalize="words"
+          />
+          <TouchableOpacity
+            style={[m.saveBtn, !name.trim() && m.saveBtnOff]}
+            onPress={() => { if (name.trim()) { onSave(name.trim()); onClose(); } }}
+            activeOpacity={0.85}
+          >
+            <Text style={m.saveBtnTxt}>Save Name</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={m.cancelBtn} onPress={onClose} activeOpacity={0.7}>
+            <Text style={m.cancelBtnTxt}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function ChangePinModal({
+  visible, onClose, onChangePin,
+}: {
+  visible: boolean; onClose: () => void;
+  onChangePin: (current: string, next: string) => Promise<boolean>;
+}) {
+  const [step, setStep]       = useState<"current" | "new" | "confirm">("current");
+  const [current, setCurrent] = useState("");
+  const [next, setNext]       = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError]     = useState("");
+  const [saving, setSaving]   = useState(false);
+
+  function reset() {
+    setStep("current"); setCurrent(""); setNext(""); setConfirm(""); setError("");
+  }
+
+  function close() { reset(); onClose(); }
+
+  async function handleNext() {
+    if (step === "current") {
+      if (current.length !== 4) { setError("PIN must be 4 digits."); return; }
+      setError(""); setStep("new");
+    } else if (step === "new") {
+      if (next.length !== 4) { setError("New PIN must be 4 digits."); return; }
+      setError(""); setStep("confirm");
+    } else {
+      if (confirm !== next) { setError("PINs do not match."); return; }
+      setSaving(true);
+      const ok = await onChangePin(current, next);
+      setSaving(false);
+      if (ok) {
+        Alert.alert("PIN Changed", "Your PIN has been updated successfully.");
+        close();
+      } else {
+        setError("Current PIN is incorrect.");
+        setStep("current"); setCurrent(""); setNext(""); setConfirm("");
+      }
+    }
+  }
+
+  const pinVal   = step === "current" ? current : step === "new" ? next : confirm;
+  const setPinVal = step === "current" ? setCurrent : step === "new" ? setNext : setConfirm;
+  const stepLabel = step === "current" ? "Enter current PIN" : step === "new" ? "Enter new PIN" : "Confirm new PIN";
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
+      <View style={m.overlay}>
+        <TouchableOpacity style={m.backdrop} activeOpacity={1} onPress={close} />
+        <View style={m.sheet}>
+          <View style={m.handle} />
+          <Text style={m.title}>Change PIN</Text>
+          <Text style={m.subtitle}>{stepLabel}</Text>
+          <TextInput
+            style={[m.input, { letterSpacing: 12, fontSize: 20, textAlign: "center" }]}
+            value={pinVal}
+            onChangeText={(t) => { setPinVal(t.replace(/\D/g, "").slice(0, 4)); setError(""); }}
+            placeholder="••••"
+            placeholderTextColor="#7A9A7A"
+            keyboardType="number-pad"
+            secureTextEntry
+            maxLength={4}
+            autoFocus
+          />
+          {!!error && <Text style={m.errorTxt}>{error}</Text>}
+          <TouchableOpacity
+            style={[m.saveBtn, (pinVal.length !== 4 || saving) && m.saveBtnOff]}
+            onPress={handleNext}
+            activeOpacity={0.85}
+            disabled={pinVal.length !== 4 || saving}
+          >
+            <Text style={m.saveBtnTxt}>
+              {saving ? "Saving…" : step === "confirm" ? "Confirm" : "Next"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={m.cancelBtn} onPress={close} activeOpacity={0.7}>
+            <Text style={m.cancelBtnTxt}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function SettingsScreen() {
-  const { customerName, phone, balanceUGX, signOut } = useAuth();
+  const { customerName, phone, balanceUGX, signOut, updateCustomerName, changePin } = useAuth();
   const insets  = useSafeAreaInsets();
   const topPad  = Platform.OS === "web" ? 67 : insets.top;
+
+  const [editNameVisible, setEditNameVisible] = useState(false);
+  const [changePinVisible, setChangePinVisible] = useState(false);
 
   const initials = customerName
     .split(" ")
@@ -84,16 +214,8 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleChangePIN = () => {
-    Alert.alert(
-      "Change PIN",
-      "To change your PIN, sign out and go through the setup flow again.",
-      [{ text: "OK" }]
-    );
-  };
-
   return (
-    <View style={{ flex: 1, backgroundColor: NAVY }}>
+    <View style={{ flex: 1, backgroundColor: GREEN }}>
       <View style={[s.headerBar, { paddingTop: topPad + 4 }]}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -129,7 +251,8 @@ export default function SettingsScreen() {
             icon="user"
             label="Full Name"
             value={customerName || "—"}
-            color={GOLD}
+            color={LIME}
+            onPress={() => setEditNameVisible(true)}
           />
           <View style={s.sep} />
           <SettingRow
@@ -152,8 +275,8 @@ export default function SettingsScreen() {
           <SettingRow
             icon="lock"
             label="Change PIN"
-            color={GOLD}
-            onPress={handleChangePIN}
+            color={LIME}
+            onPress={() => setChangePinVisible(true)}
           />
           <View style={s.sep} />
           <SettingRow
@@ -192,6 +315,18 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <EditNameModal
+        visible={editNameVisible}
+        currentName={customerName}
+        onSave={updateCustomerName}
+        onClose={() => setEditNameVisible(false)}
+      />
+      <ChangePinModal
+        visible={changePinVisible}
+        onClose={() => setChangePinVisible(false)}
+        onChangePin={changePin}
+      />
     </View>
   );
 }
@@ -208,7 +343,7 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: NAVY3,
+    backgroundColor: GREEN2,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -217,7 +352,6 @@ const s = StyleSheet.create({
     fontSize: 18,
     fontFamily: "Inter_700Bold",
   },
-
   profileCard: {
     alignItems: "center",
     paddingVertical: 28,
@@ -225,7 +359,7 @@ const s = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 8,
     marginBottom: 24,
-    backgroundColor: NAVY2,
+    backgroundColor: CARD_BG,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: BORDER,
@@ -234,13 +368,13 @@ const s = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: GOLD,
+    backgroundColor: LIME,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
   },
   avatarText: {
-    color: NAVY,
+    color: GREEN,
     fontSize: 26,
     fontFamily: "Inter_700Bold",
   },
@@ -257,19 +391,18 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   balancePill: {
-    backgroundColor: GOLD + "22",
+    backgroundColor: LIME + "22",
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: GOLD + "44",
+    borderColor: LIME + "44",
   },
   balancePillText: {
-    color: GOLD,
+    color: LIME,
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
   },
-
   sectionTitle: {
     color: MUTED,
     fontSize: 11,
@@ -282,7 +415,7 @@ const s = StyleSheet.create({
   },
   section: {
     marginHorizontal: 20,
-    backgroundColor: NAVY2,
+    backgroundColor: CARD_BG,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: BORDER,
@@ -319,7 +452,6 @@ const s = StyleSheet.create({
     backgroundColor: BORDER,
     marginLeft: 64,
   },
-
   signOutBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -336,4 +468,20 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
   },
+});
+
+const m = StyleSheet.create({
+  overlay:    { flex: 1, justifyContent: "flex-end" },
+  backdrop:   { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
+  sheet:      { backgroundColor: "#FFF", borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingBottom: 40, paddingTop: 14 },
+  handle:     { width: 40, height: 4, borderRadius: 2, backgroundColor: "#E0E0E0", alignSelf: "center", marginBottom: 20 },
+  title:      { fontFamily: "Inter_700Bold", fontSize: 20, color: GREEN, marginBottom: 4 },
+  subtitle:   { fontFamily: "Inter_400Regular", fontSize: 13, color: "#7A9A7A", marginBottom: 20 },
+  input:      { backgroundColor: "#F2F4F2", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontFamily: "Inter_400Regular", fontSize: 16, color: GREEN, borderWidth: 1.5, borderColor: "#C6F135", marginBottom: 20 },
+  saveBtn:    { backgroundColor: GREEN, borderRadius: 14, paddingVertical: 15, alignItems: "center", marginBottom: 10 },
+  saveBtnOff: { backgroundColor: "#C8D8C8" },
+  saveBtnTxt: { fontFamily: "Inter_700Bold", fontSize: 15, color: LIME },
+  cancelBtn:  { paddingVertical: 12, alignItems: "center" },
+  cancelBtnTxt: { fontFamily: "Inter_500Medium", fontSize: 14, color: "#7A9A7A" },
+  errorTxt:   { fontFamily: "Inter_400Regular", fontSize: 12, color: "#EF4444", marginBottom: 12, textAlign: "center" },
 });

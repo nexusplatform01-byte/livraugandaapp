@@ -23,9 +23,9 @@ import {
 } from "@/lib/firestore";
 import { addNotification } from "@/lib/firestore";
 
-const NAVY  = "#0A1628";
-const NAVY2 = "#0F1E36";
-const NAVY3 = "#162440";
+const NAVY  = "#1A3B2F";
+const NAVY2 = "#243D30";
+const NAVY3 = "#22503E";
 const GOLD  = "#C9A84C";
 const WHITE = "#FFFFFF";
 const MUTED = "rgba(255,255,255,0.5)";
@@ -36,9 +36,9 @@ type SavingMode  = "manual" | "automatic" | "goal" | "fixed";
 type Screen      = "dashboard" | "create";
 
 const ACCOUNT_TYPE_INFO = {
-  individual: { label: "Individual", icon: "user"      as const, gradient: ["#0A1E4A", "#0A1628"] as const },
-  joint:      { label: "Family / Joint", icon: "users" as const, gradient: ["#0A3A2A", "#0A1628"] as const },
-  company:    { label: "Company", icon: "briefcase"    as const, gradient: ["#2D1A4A", "#0A1628"] as const },
+  individual: { label: "Individual", icon: "user"      as const, gradient: ["#1A3B40", "#1A3B2F"] as const },
+  joint:      { label: "Family / Joint", icon: "users" as const, gradient: ["#1A4A38", "#1A3B2F"] as const },
+  company:    { label: "Company", icon: "briefcase"    as const, gradient: ["#2D3A30", "#1A3B2F"] as const },
 };
 
 const SAVING_MODES: { key: SavingMode; label: string; icon: string; desc: string; color: string }[] = [
@@ -338,7 +338,7 @@ export default function SavingsScreen() {
       contentContainerStyle={{ paddingTop: topPad + 8, paddingBottom: 120 }}
       showsVerticalScrollIndicator={false}
     >
-      <LinearGradient colors={["#162440", "#0A1628"]} style={s.banner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+      <LinearGradient colors={["#22503E", "#1A3B2F"]} style={s.banner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <View style={s.bannerTop}>
           <View>
             <Text style={s.bannerLabel}>Total Savings</Text>

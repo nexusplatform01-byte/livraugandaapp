@@ -14,7 +14,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { AppTabBar } from "@/components/AppTabBar";
 import {
   formatMsisdn,
   pollRequestStatus,
@@ -474,7 +473,7 @@ export default function BuyScreen() {
         onConfirm={handleConfirm}
         onCancel={() => { setSheetOpen(false); setStatusMsg(""); }}
       />
-      <AppTabBar activeTab="" />
+      
     </View>
   );
 }

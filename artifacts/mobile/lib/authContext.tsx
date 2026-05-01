@@ -30,6 +30,8 @@ interface AuthContextValue {
   validatePhone: (msisdn: string) => Promise<{ customerName: string; hasPinSet: boolean }>;
   setupPin: (pin: string) => Promise<void>;
   verifyPin: (pin: string) => Promise<boolean>;
+  changePin: (currentPin: string, newPin: string) => Promise<boolean>;
+  updateCustomerName: (name: string) => Promise<void>;
   setPinVerified: (v: boolean) => void;
   signOut: () => Promise<void>;
   refreshBalance: () => Promise<void>;
@@ -171,6 +173,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setBalanceUGX((prev) => prev + amount);
   }, [phone]);
 
+  const changePin = useCallback(async (currentPin: string, newPin: string): Promise<boolean> => {
+    if (!phone) return false;
+    try {
+      const stored = await AsyncStorage.getItem(`${PIN_KEY_PREFIX}${phone}`);
+      if (stored !== currentPin) return false;
+      await AsyncStorage.setItem(`${PIN_KEY_PREFIX}${phone}`, newPin);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [phone]);
+
+  const updateCustomerName = useCallback(async (name: string) => {
+    if (!phone) return;
+    await AsyncStorage.setItem(SESSION_NAME_KEY, name);
+    setCustomerName(name);
+  }, [phone]);
+
   const signOut = useCallback(async () => {
     try {
       await AsyncStorage.removeItem(SESSION_PHONE_KEY);
@@ -195,6 +215,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         validatePhone,
         setupPin,
         verifyPin,
+        changePin,
+        updateCustomerName,
         setPinVerified,
         signOut,
         refreshBalance,

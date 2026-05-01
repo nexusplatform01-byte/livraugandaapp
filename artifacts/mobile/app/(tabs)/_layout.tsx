@@ -8,8 +8,8 @@ import { Dimensions, Platform, StyleSheet, View, useColorScheme } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Path, Svg } from "react-native-svg";
 
-const TAB_BG   = "#0A1628";
-const ACTIVE   = "#C9A84C";
+const TAB_BG   = "#1A3B2F";
+const ACTIVE   = "#C6F135";
 const INACTIVE = "rgba(255,255,255,0.45)";
 const NOTCH_R  = 42;
 
@@ -164,6 +164,18 @@ function ClassicTabLayout() {
         name="receive"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="buy"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="pay"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="bank"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
@@ -172,7 +184,7 @@ const sendOuterStyle = {
   width: 76,
   height: 76,
   borderRadius: 38,
-  backgroundColor: "#0A1628",
+  backgroundColor: "#1A3B2F",
   alignItems: "center" as const,
   justifyContent: "center" as const,
   marginBottom: 20,
@@ -185,7 +197,7 @@ const sendBtnStyle = {
   backgroundColor: ACTIVE,
   alignItems: "center" as const,
   justifyContent: "center" as const,
-  shadowColor: "#C9A84C",
+  shadowColor: "#C6F135",
   shadowOffset: { width: 0, height: 3 },
   shadowOpacity: 0.4,
   shadowRadius: 8,

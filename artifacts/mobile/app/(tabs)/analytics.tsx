@@ -15,9 +15,9 @@ import { useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/authContext";
 import { getTransactions, type FsTx } from "@/lib/firestore";
 
-const NAVY  = "#0A1628";
-const NAVY2 = "#0F1E36";
-const NAVY3 = "#162440";
+const NAVY  = "#1A3B2F";
+const NAVY2 = "#243D30";
+const NAVY3 = "#22503E";
 const GOLD  = "#C9A84C";
 const GREEN = "#22C55E";
 const RED   = "#EF4444";
@@ -163,7 +163,7 @@ export default function AnalyticsScreen() {
       ) : (
         <>
           <View style={s.statsRow}>
-            <LinearGradient colors={["#162440", "#0A1628"]} style={s.statCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <LinearGradient colors={["#22503E", "#1A3B2F"]} style={s.statCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
               <View style={s.statIconWrap}>
                 <Feather name="arrow-down-left" size={14} color={GOLD} />
               </View>
@@ -183,7 +183,7 @@ export default function AnalyticsScreen() {
               </Text>
             </LinearGradient>
 
-            <LinearGradient colors={["#162440", "#0A1C12"]} style={s.statCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <LinearGradient colors={["#22503E", "#0A1C12"]} style={s.statCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
               <View style={[s.statIconWrap, { backgroundColor: "rgba(201,168,76,0.15)" }]}>
                 <Feather name="trending-up" size={14} color={GOLD} />
               </View>

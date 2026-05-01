@@ -70,9 +70,6 @@ function RootLayoutNav() {
         <Stack.Screen name="splash" />
         <Stack.Screen name="auth" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="buy" />
-        <Stack.Screen name="pay" />
-        <Stack.Screen name="bank" />
         <Stack.Screen
           name="settings"
           options={{
