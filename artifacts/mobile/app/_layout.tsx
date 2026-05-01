@@ -21,18 +21,17 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function AuthGate() {
-  const { user, loading, hasPinSet, pinVerified } = useAuth();
+  const { phone, loading, hasPinSet, pinVerified } = useAuth();
   const segments = useSegments();
 
   useEffect(() => {
     if (loading) return;
     const inAuth   = segments[0] === "auth";
     const inSplash = segments[0] === "splash";
-    const inTabs   = segments[0] === "(tabs)";
 
     if (inSplash) return;
 
-    if (!user) {
+    if (!phone) {
       if (!inAuth) router.replace("/auth");
       return;
     }
@@ -51,7 +50,7 @@ function AuthGate() {
     if (inAuth) {
       router.replace("/(tabs)");
     }
-  }, [user, loading, hasPinSet, pinVerified, segments]);
+  }, [phone, loading, hasPinSet, pinVerified, segments]);
 
   return null;
 }

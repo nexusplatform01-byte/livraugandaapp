@@ -3,121 +3,85 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
-import {
-  ConfirmationResult,
-  onAuthStateChanged,
-  signOut as firebaseSignOut,
-  User,
-} from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { auth } from "./firebase";
+import { apiFetch } from "./api";
 
-const PIN_KEY_PREFIX = "fw:pin:";
-const PHONE_KEY      = "fw:lastPhone";
+const PIN_KEY_PREFIX      = "lp:pin:";
+const SESSION_PHONE_KEY   = "lp:session:phone";
+const SESSION_NAME_KEY    = "lp:session:name";
 
 interface AuthContextValue {
-  user: User | null;
+  phone: string;
+  customerName: string;
   loading: boolean;
   pinVerified: boolean;
   hasPinSet: boolean;
 
-  sendOtp: (phoneNumber: string, verifierOrContainer?: any) => Promise<void>;
-  confirmOtp: (code: string) => Promise<User>;
+  validatePhone: (msisdn: string) => Promise<{ customerName: string; hasPinSet: boolean }>;
   setupPin: (pin: string) => Promise<void>;
   verifyPin: (pin: string) => Promise<boolean>;
   setPinVerified: (v: boolean) => void;
   signOut: () => Promise<void>;
-  lastPhone: string;
 }
 
 const AuthCtx = createContext<AuthContextValue | null>(null);
 
-let _confirmationResult: ConfirmationResult | null = null;
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser]               = useState<User | null>(null);
+  const [phone, setPhone]             = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [loading, setLoading]         = useState(true);
   const [pinVerified, setPinVerified] = useState(false);
   const [hasPinSet, setHasPinSet]     = useState(false);
-  const [lastPhone, setLastPhone]     = useState("");
-
-  const checkPin = useCallback(async (uid: string) => {
-    try {
-      const val = await AsyncStorage.getItem(`${PIN_KEY_PREFIX}${uid}`);
-      setHasPinSet(!!val);
-    } catch {
-      setHasPinSet(false);
-    }
-  }, []);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      if (u) {
-        await checkPin(u.uid);
-        try {
-          const p = await AsyncStorage.getItem(PHONE_KEY);
-          setLastPhone(p || u.phoneNumber || "");
-        } catch {}
-      } else {
-        setHasPinSet(false);
-        setPinVerified(false);
-      }
-      setLoading(false);
-    });
-    return unsub;
-  }, [checkPin]);
-
-  const sendOtp = useCallback(
-    async (phoneNumber: string, verifierOrContainer?: any) => {
-      const { signInWithPhoneNumber, RecaptchaVerifier } = await import("firebase/auth");
-      let verifier = verifierOrContainer;
-      if (!verifier && typeof document !== "undefined") {
-        const containerId = "fw-recaptcha";
-        let el = document.getElementById(containerId);
-        if (!el) {
-          el = document.createElement("div");
-          el.id = containerId;
-          document.body.appendChild(el);
-        }
-        verifier = new RecaptchaVerifier(auth, containerId, { size: "invisible" });
-        await verifier.render();
-      }
+    (async () => {
       try {
-        await AsyncStorage.setItem(PHONE_KEY, phoneNumber);
-        setLastPhone(phoneNumber);
+        const storedPhone = await AsyncStorage.getItem(SESSION_PHONE_KEY);
+        const storedName  = await AsyncStorage.getItem(SESSION_NAME_KEY);
+        if (storedPhone) {
+          setPhone(storedPhone);
+          setCustomerName(storedName || "");
+          const pinExists = await AsyncStorage.getItem(`${PIN_KEY_PREFIX}${storedPhone}`);
+          setHasPinSet(!!pinExists);
+        }
       } catch {}
-      _confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
-    },
-    [],
-  );
+      setLoading(false);
+    })();
+  }, []);
 
-  const confirmOtp = useCallback(async (code: string): Promise<User> => {
-    if (!_confirmationResult) throw new Error("No OTP request in progress.");
-    const cred = await _confirmationResult.confirm(code);
-    _confirmationResult = null;
-    if (!cred.user) throw new Error("Verification failed.");
-    return cred.user;
+  const validatePhone = useCallback(async (msisdn: string) => {
+    const res = await apiFetch<{ success: boolean; customer_name?: string; message?: string }>(
+      "/api/validate-phone",
+      { method: "POST", body: { msisdn } },
+    );
+    const name = res.customer_name || "";
+    await AsyncStorage.setItem(SESSION_PHONE_KEY, msisdn);
+    await AsyncStorage.setItem(SESSION_NAME_KEY, name);
+    setPhone(msisdn);
+    setCustomerName(name);
+    const pinExists = await AsyncStorage.getItem(`${PIN_KEY_PREFIX}${msisdn}`);
+    const has = !!pinExists;
+    setHasPinSet(has);
+    return { customerName: name, hasPinSet: has };
   }, []);
 
   const setupPin = useCallback(
     async (pin: string) => {
-      if (!user) throw new Error("Not logged in.");
-      await AsyncStorage.setItem(`${PIN_KEY_PREFIX}${user.uid}`, pin);
+      if (!phone) throw new Error("No phone session.");
+      await AsyncStorage.setItem(`${PIN_KEY_PREFIX}${phone}`, pin);
       setHasPinSet(true);
       setPinVerified(true);
     },
-    [user],
+    [phone],
   );
 
   const verifyPin = useCallback(
     async (pin: string): Promise<boolean> => {
-      if (!user) return false;
+      if (!phone) return false;
       try {
-        const stored = await AsyncStorage.getItem(`${PIN_KEY_PREFIX}${user.uid}`);
+        const stored = await AsyncStorage.getItem(`${PIN_KEY_PREFIX}${phone}`);
         const ok = stored === pin;
         if (ok) setPinVerified(true);
         return ok;
@@ -125,13 +89,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
     },
-    [user],
+    [phone],
   );
 
   const signOut = useCallback(async () => {
     try {
-      await firebaseSignOut(auth);
+      await AsyncStorage.removeItem(SESSION_PHONE_KEY);
+      await AsyncStorage.removeItem(SESSION_NAME_KEY);
     } catch {}
+    setPhone("");
+    setCustomerName("");
     setPinVerified(false);
     setHasPinSet(false);
   }, []);
@@ -139,17 +106,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthCtx.Provider
       value={{
-        user,
+        phone,
+        customerName,
         loading,
         pinVerified,
         hasPinSet,
-        sendOtp,
-        confirmOtp,
+        validatePhone,
         setupPin,
         verifyPin,
         setPinVerified,
         signOut,
-        lastPhone,
       }}
     >
       {children}
