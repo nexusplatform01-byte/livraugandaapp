@@ -18,12 +18,11 @@ import { BankIcon } from "@/components/QuickActionIcons";
 import { formatMsisdn, pollRequestStatus, relworxApi } from "@/lib/relworx";
 import { ApiError } from "@/lib/api";
 import { setUserPhone } from "@/lib/userSession";
+import { useAuth } from "@/lib/authContext";
 
 const DARK_GREEN = "#1A3B2F";
 const LIME = "#C6F135";
 const BG = "#F2F4F2";
-
-const LOCAL_BALANCE = 209891;
 
 type SendType = "mobile" | "livra" | "bank" | "online" | null;
 
@@ -255,6 +254,7 @@ function FormFields({
 
 export default function SendScreen() {
   const insets = useSafeAreaInsets();
+  const { balanceUGX, deductBalance } = useAuth();
   const [selected, setSelected] = useState<SendType>(null);
   const label = OPTIONS.find((o) => o.key === selected)?.label ?? "";
 
@@ -329,6 +329,10 @@ export default function SendScreen() {
       Alert.alert("Amount", "Enter a valid amount in UGX.");
       return;
     }
+    if (amt > balanceUGX) {
+      Alert.alert("Insufficient Balance", `You need UGX ${amt.toLocaleString()} but only have UGX ${balanceUGX.toLocaleString()} in your wallet.`);
+      return;
+    }
 
     setSending(true);
     try {
@@ -342,13 +346,22 @@ export default function SendScreen() {
       });
       const final = await pollRequestStatus(res.internal_reference, { timeoutMs: 75000 });
       const ok = (final.status ?? "").toLowerCase() === "success";
+      if (ok) {
+        await deductBalance(
+          amt,
+          `Sent to ${recipientName || msisdn}${note ? ` — ${note}` : ""}`,
+          "Transfer",
+          "send",
+          "#007AFF",
+        );
+        resetForm();
+      }
       Alert.alert(
         ok ? "Sent" : "Pending",
         ok
           ? `UGX ${amt.toLocaleString()} sent to ${msisdn}.`
           : final.message || "Transfer is still processing — check Transactions.",
       );
-      if (ok) resetForm();
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Transfer failed. Please try again.";
       Alert.alert("Transfer Failed", msg);
@@ -364,7 +377,7 @@ export default function SendScreen() {
         <View style={[styles.topBar, { paddingTop: (Platform.OS === "web" ? 20 : insets.top) + 10 }]}>
           <View style={styles.topBarCenter}>
             <Text style={styles.topBarLabel}>Your Wallet Balance</Text>
-            <Text style={styles.topBarBalance}>UGX {LOCAL_BALANCE.toLocaleString()}</Text>
+            <Text style={styles.topBarBalance}>UGX {balanceUGX.toLocaleString()}</Text>
           </View>
         </View>
 

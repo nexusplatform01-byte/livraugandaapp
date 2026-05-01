@@ -1,7 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,6 +14,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
+import { useAuth } from "@/lib/authContext";
+import { createLoan, getLoans, addNotification, type FsLoan } from "@/lib/firestore";
 
 // ─── Dark green theme ──────────────────────────────────────────────────────────
 const DG     = "#0D1F17";
@@ -23,7 +28,7 @@ const RED    = "#FF6B6B";
 const MUTED  = "rgba(255,255,255,0.45)";
 const BORDER = "rgba(255,255,255,0.08)";
 
-type Screen   = "phone" | "loanType" | "documents" | "dashboard";
+type Screen   = "loanType" | "documents" | "dashboard";
 type LoanType = "individual" | "business" | "work_allowance" | null;
 
 const PHONE_NAMES: Record<string, string> = {
@@ -296,14 +301,15 @@ function DocumentsStep({ loanType, verifiedName, onNext, onBack, topPad }: { loa
 }
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────────
-function LoanDashboard({ verifiedName, loanType, topPad }: { verifiedName: string; loanType: LoanType; topPad: number }) {
-  const ltInfo      = LOAN_TYPES.find((l) => l.key === loanType)!;
+function LoanDashboard({ verifiedName, loanType, topPad, loans = [], onApplyNew }: { verifiedName: string; loanType: LoanType; topPad: number; loans?: FsLoan[]; onApplyNew?: () => void }) {
+  const ltInfo      = LOAN_TYPES.find((l) => l.key === loanType) ?? LOAN_TYPES[0];
   const [tab, setTab] = useState<"overview" | "history">("overview");
-  const loanLimit   = loanType === "individual" ? 500000 : loanType === "business" ? 5000000 : 2000000;
-  const outstanding = 300000;
-  const nextPayment = 25000;
-  const dueDate     = "May 15, 2025";
-  const paidPct     = Math.round(((loanLimit - outstanding) / loanLimit) * 100);
+  const activeLoan  = loans.find((l) => l.status === "active") || loans[0];
+  const loanLimit   = activeLoan?.amount ?? (loanType === "individual" ? 500000 : loanType === "business" ? 5000000 : 2000000);
+  const outstanding = activeLoan?.outstanding ?? loanLimit;
+  const nextPayment = activeLoan?.nextPayment ?? Math.round(loanLimit / 12);
+  const dueDate     = activeLoan?.dueDate ?? "—";
+  const paidPct     = loanLimit > 0 ? Math.round(((loanLimit - outstanding) / loanLimit) * 100) : 0;
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: DG }} contentContainerStyle={{ paddingTop: topPad + 16, paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
@@ -423,15 +429,83 @@ function LoanDashboard({ verifiedName, loanType, topPad }: { verifiedName: strin
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const [screen,       setScreen]       = useState<Screen>("phone");
-  const [phone,        setPhone]        = useState("");
-  const [verifiedName, setVerifiedName] = useState("");
-  const [loanType,     setLoanType]     = useState<LoanType>(null);
+  const { phone: authPhone, customerName } = useAuth();
 
-  if (screen === "phone")    return <PhoneStep    topPad={topPad} onNext={(p, n) => { setPhone(p); setVerifiedName(n); setScreen("loanType"); }} />;
-  if (screen === "loanType") return <LoanTypeStep topPad={topPad} onNext={(t) => { setLoanType(t); setScreen("documents"); }} onBack={() => setScreen("phone")} />;
-  if (screen === "documents") return <DocumentsStep topPad={topPad} loanType={loanType} verifiedName={verifiedName} onNext={() => setScreen("dashboard")} onBack={() => setScreen("loanType")} />;
-  return <LoanDashboard topPad={topPad} verifiedName={verifiedName} loanType={loanType} />;
+  const [screen,    setScreen]    = useState<Screen>("loanType");
+  const [loanType,  setLoanType]  = useState<LoanType>(null);
+  const [loans,     setLoans]     = useState<FsLoan[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadLoans = useCallback(async () => {
+    if (!authPhone) return;
+    const data = await getLoans(authPhone);
+    if (data.length > 0) {
+      setLoanType(data[0].type as LoanType);
+      setScreen("dashboard");
+    }
+    setLoans(data);
+  }, [authPhone]);
+
+  useFocusEffect(useCallback(() => { loadLoans(); }, [loadLoans]));
+
+  const handleDocumentsSubmit = async () => {
+    if (!loanType || submitting) return;
+    setSubmitting(true);
+    try {
+      const loanLimit = loanType === "individual" ? 500000 : loanType === "business" ? 5000000 : 2000000;
+      await createLoan(authPhone, {
+        type: loanType,
+        amount: loanLimit,
+        outstanding: loanLimit,
+        nextPayment: Math.round(loanLimit / 12),
+        interestRate: loanType === "work_allowance" ? 3 : 5,
+        dueDate: new Date(Date.now() + 30 * 86400000).toLocaleDateString("en-UG", { month: "short", day: "numeric", year: "numeric" }),
+        status: "active",
+      });
+      await addNotification(authPhone, {
+        title: "Loan Application Submitted",
+        body: `Your ${loanType.replace("_", " ")} loan application is under review. We'll notify you shortly.`,
+        type: "loan",
+        read: false,
+      });
+      Alert.alert("Application Submitted!", "Your loan application has been received. We'll review and notify you within 24 hours.");
+      await loadLoans();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not submit loan application.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (screen === "loanType") {
+    return (
+      <LoanTypeStep
+        topPad={topPad}
+        onNext={(t) => { setLoanType(t); setScreen("documents"); }}
+        onBack={() => { if (loans.length > 0) setScreen("dashboard"); }}
+      />
+    );
+  }
+  if (screen === "documents") {
+    return (
+      <DocumentsStep
+        topPad={topPad}
+        loanType={loanType}
+        verifiedName={customerName}
+        onNext={handleDocumentsSubmit}
+        onBack={() => setScreen("loanType")}
+      />
+    );
+  }
+  return (
+    <LoanDashboard
+      topPad={topPad}
+      verifiedName={customerName}
+      loanType={loanType}
+      loans={loans}
+      onApplyNew={() => setScreen("loanType")}
+    />
+  );
 }
 
 // ─── Styles ────────────────────────────────────────────────────────────────────

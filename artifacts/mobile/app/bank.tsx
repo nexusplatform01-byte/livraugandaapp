@@ -23,6 +23,7 @@ import {
 } from "@/lib/relworx";
 import { ApiError } from "@/lib/api";
 import { setUserPhone } from "@/lib/userSession";
+import { useAuth } from "@/lib/authContext";
 
 const DARK_GREEN = "#1A3B2F";
 const LIME       = "#C6F135";
@@ -32,8 +33,6 @@ const BORDER     = "#E2EAE2";
 const TEXT       = "#1A3B2F";
 const MUTED      = "#7A9A7A";
 const SEP        = "#F0F4F0";
-
-const LOCAL_BALANCE = 209891;
 
 /** Turn a code like STANBIC_BANK_UGANDA_TRANSFER into initials STB */
 function codeToInitials(name: string): string {
@@ -202,6 +201,7 @@ function ConfirmSheet({
 
 export default function BankScreen() {
   const insets = useSafeAreaInsets();
+  const { balanceUGX, deductBalance } = useAuth();
   const [banks, setBanks]           = useState<BankEntry[]>([]);
   const [banksLoading, setBanksLoading] = useState(true);
   const [selectedBank,  setSelectedBank]  = useState<BankEntry | null>(null);
@@ -266,12 +266,19 @@ export default function BankScreen() {
         account_name: depositorName,
         description: note || `Bank transfer to ${selectedBank.name}`,
       });
-      setStatusMsg("Sending mobile-money request…");
+      setStatusMsg("Processing bank transfer from wallet…");
       const p = await relworxApi.purchaseProduct(v.validation_reference);
-      setStatusMsg("Awaiting your mobile-money confirmation…");
+      setStatusMsg("Confirming transfer…");
       const final = await pollRequestStatus(p.internal_reference, { timeoutMs: 90000 });
       const ok = (final.status ?? "").toLowerCase() === "success";
       if (ok) {
+        await deductBalance(
+          num,
+          `Bank transfer to ${depositorName} — ${selectedBank.name}`,
+          "Bank",
+          "credit-card",
+          "#BF5AF2",
+        );
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setSuccessMsg(`UGX ${num.toLocaleString()} sent to ${depositorName} at ${selectedBank.name}.`);
         setSheetOpen(false);
@@ -301,7 +308,7 @@ export default function BankScreen() {
         </TouchableOpacity>
         <View style={s.topBarCenter}>
           <Text style={s.topBarLabel}>Your Wallet Balance</Text>
-          <Text style={s.topBarBalance}>UGX {LOCAL_BALANCE.toLocaleString()}</Text>
+          <Text style={s.topBarBalance}>UGX {balanceUGX.toLocaleString()}</Text>
         </View>
         <View style={{ width: 38 }} />
       </View>

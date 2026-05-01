@@ -15,6 +15,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/lib/authContext";
+import { registerForPushNotifications } from "@/lib/notificationService";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -52,6 +53,12 @@ function AuthGate() {
     }
   }, [phone, loading, hasPinSet, pinVerified, segments]);
 
+  useEffect(() => {
+    if (phone && pinVerified) {
+      registerForPushNotifications(phone).catch(() => {});
+    }
+  }, [phone, pinVerified]);
+
   return null;
 }
 
@@ -60,12 +67,26 @@ function RootLayoutNav() {
     <>
       <AuthGate />
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="splash"   />
-        <Stack.Screen name="auth"     />
-        <Stack.Screen name="(tabs)"   />
-        <Stack.Screen name="buy"      />
-        <Stack.Screen name="pay"      />
-        <Stack.Screen name="bank"     />
+        <Stack.Screen name="splash" />
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="buy" />
+        <Stack.Screen name="pay" />
+        <Stack.Screen name="bank" />
+        <Stack.Screen
+          name="settings"
+          options={{
+            presentation: "modal",
+            animation: "slide_from_bottom",
+          }}
+        />
+        <Stack.Screen
+          name="notifications"
+          options={{
+            presentation: "modal",
+            animation: "slide_from_right",
+          }}
+        />
       </Stack>
     </>
   );

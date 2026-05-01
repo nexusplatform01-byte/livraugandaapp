@@ -8,17 +8,14 @@ import { Dimensions, Platform, StyleSheet, View, useColorScheme } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Path, Svg } from "react-native-svg";
 
-const TAB_BG = "#1A3B2F";
-const ACTIVE = "#C6F135";
-const INACTIVE = "rgba(255,255,255,0.55)";
-// Notch arc radius — matches the outer ring (38px) + small breathing gap
-const NOTCH_R = 42;
+const TAB_BG   = "#0A1628";
+const ACTIVE   = "#C9A84C";
+const INACTIVE = "rgba(255,255,255,0.45)";
+const NOTCH_R  = 42;
 
 function NotchedBackground({ height }: { height: number }) {
   const width = Dimensions.get("window").width;
   const cx = width / 2;
-  // SVG path: full rect with a perfect circular arc cut into the top center
-  // Clockwise arc (sweep=1) from left notch edge to right notch edge → curves downward
   const d = [
     `M 0,0`,
     `L ${cx - NOTCH_R},0`,
@@ -33,6 +30,14 @@ function NotchedBackground({ height }: { height: number }) {
     <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
       <Path d={d} fill={TAB_BG} />
     </Svg>
+  );
+}
+
+function BankTabIcon({ color }: { color: string }) {
+  return (
+    <View style={{ alignItems: "center", justifyContent: "center" }}>
+      <Feather name="credit-card" size={22} color={color} />
+    </View>
   );
 }
 
@@ -114,7 +119,7 @@ function ClassicTabLayout() {
             isIOS ? (
               <SymbolView name="banknote" tintColor={color} size={22} />
             ) : (
-              <Feather name="dollar-sign" size={22} color={color} />
+              <BankTabIcon color={color} />
             ),
         }}
       />
@@ -125,7 +130,7 @@ function ClassicTabLayout() {
           tabBarIcon: () => (
             <View style={sendOuterStyle}>
               <View style={sendBtnStyle}>
-                <Feather name="navigation" size={22} color="#1A3B2F" />
+                <Feather name="navigation" size={22} color={TAB_BG} />
               </View>
             </View>
           ),
@@ -167,7 +172,7 @@ const sendOuterStyle = {
   width: 76,
   height: 76,
   borderRadius: 38,
-  backgroundColor: "#F5F7F5",
+  backgroundColor: "#0A1628",
   alignItems: "center" as const,
   justifyContent: "center" as const,
   marginBottom: 20,
@@ -177,14 +182,14 @@ const sendBtnStyle = {
   width: 60,
   height: 60,
   borderRadius: 30,
-  backgroundColor: "#C6F135",
+  backgroundColor: ACTIVE,
   alignItems: "center" as const,
   justifyContent: "center" as const,
-  shadowColor: "#000",
+  shadowColor: "#C9A84C",
   shadowOffset: { width: 0, height: 3 },
-  shadowOpacity: 0.2,
-  shadowRadius: 5,
-  elevation: 5,
+  shadowOpacity: 0.4,
+  shadowRadius: 8,
+  elevation: 6,
 };
 
 export default function TabLayout() {

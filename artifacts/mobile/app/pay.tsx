@@ -25,6 +25,7 @@ import {
 import { ApiError } from "@/lib/api";
 import { TV_CODES, UTILITY_CODES, requiresLocation } from "@/lib/productCodes";
 import { setUserPhone } from "@/lib/userSession";
+import { useAuth } from "@/lib/authContext";
 
 const DARK_GREEN = "#1A3B2F";
 const LIME       = "#C6F135";
@@ -34,8 +35,6 @@ const BORDER     = "#E2EAE2";
 const TEXT       = "#1A3B2F";
 const MUTED      = "#7A9A7A";
 const SEP        = "#F0F4F0";
-
-const LOCAL_BALANCE = 209891;
 
 type CatKey = "tv" | "electricity" | "water";
 
@@ -171,6 +170,7 @@ function ConfirmSheet({
 
 export default function PayScreen() {
   const insets = useSafeAreaInsets();
+  const { balanceUGX, deductBalance } = useAuth();
   const [activeCat,   setActiveCat]   = useState<CatKey>("tv");
   const [activeProv,  setActiveProv]  = useState<Provider>(PROVIDERS["tv"][0]);
   const [accountNo,   setAccountNo]   = useState("");
@@ -285,10 +285,15 @@ export default function PayScreen() {
 
   async function handleConfirm() {
     if (!selected || loading) return;
+    if (selected.amount > balanceUGX) {
+      setErrorMsg(`Insufficient wallet balance. You need UGX ${selected.amount.toLocaleString()} but have UGX ${balanceUGX.toLocaleString()}.`);
+      setSheetOpen(false);
+      return;
+    }
     const msisdn = formatMsisdn(payerPhone);
     setUserPhone(msisdn).catch(() => {});
     setLoading(true);
-    setStatusMsg("Validating account…");
+    setStatusMsg("Processing from wallet…");
     try {
       const productCode = selected.planCode ?? activeProv.productCode;
       const extra: Record<string, unknown> = {};
@@ -307,12 +312,19 @@ export default function PayScreen() {
         ...extra,
       });
       if (v.customer_name) setCustomerName(v.customer_name);
-      setStatusMsg("Sending mobile-money request…");
+      setStatusMsg("Fulfilling payment…");
       const p = await relworxApi.purchaseProduct(v.validation_reference);
-      setStatusMsg("Awaiting your mobile-money confirmation…");
+      setStatusMsg("Confirming…");
       const final = await pollRequestStatus(p.internal_reference, { timeoutMs: 75000 });
       const ok = (final.status ?? "").toLowerCase() === "success";
       if (ok) {
+        await deductBalance(
+          selected.amount,
+          `${activeProv.name} — ${activeCat.toUpperCase()} payment`,
+          "Utilities",
+          "zap",
+          "#5F27CD",
+        );
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setSuccessMsg(`${activeProv.name} payment of UGX ${selected.amount.toLocaleString()} successful.`);
         setSheetOpen(false);
@@ -342,7 +354,7 @@ export default function PayScreen() {
         </TouchableOpacity>
         <View style={s.topBarCenter}>
           <Text style={s.topBarLabel}>Your Wallet Balance</Text>
-          <Text style={s.topBarBalance}>UGX {LOCAL_BALANCE.toLocaleString()}</Text>
+          <Text style={s.topBarBalance}>UGX {balanceUGX.toLocaleString()}</Text>
         </View>
         <View style={{ width: 38 }} />
       </View>

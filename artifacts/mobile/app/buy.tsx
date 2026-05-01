@@ -24,6 +24,7 @@ import {
 import { ApiError } from "@/lib/api";
 import { AIRTIME_CODES, INTERNET_CODES, VOICE_CODES } from "@/lib/productCodes";
 import { setUserPhone } from "@/lib/userSession";
+import { useAuth } from "@/lib/authContext";
 
 const DARK_GREEN = "#1A3B2F";
 const LIME       = "#C6F135";
@@ -33,8 +34,6 @@ const BORDER     = "#E2EAE2";
 const TEXT       = "#1A3B2F";
 const MUTED      = "#7A9A7A";
 const SEP        = "#F0F4F0";
-
-const LOCAL_BALANCE = 209891;
 
 type CatKey  = "airtime" | "voice" | "data";
 type ProvKey = "mtn" | "airtel" | "utl" | "roke";
@@ -144,6 +143,7 @@ function ConfirmSheet({
 
 export default function BuyScreen() {
   const insets = useSafeAreaInsets();
+  const { balanceUGX, deductBalance } = useAuth();
   const [activeCat,  setActiveCat]  = useState<CatKey>("airtime");
   const [activeProv, setActiveProv] = useState<ProvKey>("mtn");
   const [phone,      setPhone]      = useState("");
@@ -229,10 +229,15 @@ export default function BuyScreen() {
 
   async function handleConfirm() {
     if (!selectedPlan || loading) return;
+    if (selectedPlan.amount > balanceUGX) {
+      setErrorMsg(`Insufficient wallet balance. You need UGX ${selectedPlan.amount.toLocaleString()} but have UGX ${balanceUGX.toLocaleString()}.`);
+      setSheetOpen(false);
+      return;
+    }
     const msisdn = formatMsisdn(phone);
     setUserPhone(msisdn).catch(() => {});
     setLoading(true);
-    setStatusMsg("Validating phone…");
+    setStatusMsg("Processing from wallet…");
     try {
       const v = await relworxApi.validateProduct({
         msisdn,
@@ -241,12 +246,19 @@ export default function BuyScreen() {
         contact_phone: msisdn,
       });
       if (v.customer_name) setCustomerName(v.customer_name);
-      setStatusMsg("Sending mobile-money request…");
+      setStatusMsg("Fulfilling your order…");
       const p = await relworxApi.purchaseProduct(v.validation_reference);
-      setStatusMsg("Awaiting your mobile-money confirmation…");
+      setStatusMsg("Confirming…");
       const final = await pollRequestStatus(p.internal_reference, { timeoutMs: 75000 });
       const ok = (final.status ?? "").toLowerCase() === "success";
       if (ok) {
+        await deductBalance(
+          selectedPlan.amount,
+          `${selectedPlan.name} — ${PROVIDERS[activeProv].name}`,
+          "Airtime",
+          "phone",
+          "#FF9F43",
+        );
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setSuccessMsg(`${selectedPlan.name} sent to ${msisdn}.`);
         setSheetOpen(false);
@@ -285,7 +297,7 @@ export default function BuyScreen() {
         </TouchableOpacity>
         <View style={s.topBarCenter}>
           <Text style={s.topBarLabel}>Your Wallet Balance</Text>
-          <Text style={s.topBarBalance}>UGX {LOCAL_BALANCE.toLocaleString()}</Text>
+          <Text style={s.topBarBalance}>UGX {balanceUGX.toLocaleString()}</Text>
         </View>
         <View style={{ width: 38 }} />
       </View>
