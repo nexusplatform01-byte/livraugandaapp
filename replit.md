@@ -13,7 +13,8 @@ Expo (React Native) wallet app at `artifacts/mobile/`. Uganda-focused, Relworx-p
 - **Auth**: Relworx phone validation + 4-digit PIN (AsyncStorage). No Firebase Auth. Firestore docs keyed by phone (`users/{phone}`).
 - **Balance**: Real-time from Firestore `users/{phone}.balanceUGX` via `useAuth()` context.
 - **Payments**: All deductions go through `deductBalance()` in authContext (Firestore + transaction log).
-- **Colors**: Navy `#0A1628`, Gold `#C9A84C` throughout.
+- **Colors**: Dark green `#1A3B2F` (bg), `#243D30` (cards), Lime `#C6F135` (accent) — replaced old Navy/Gold scheme.
+- **Tab icons**: Custom SVG components in `components/TabIcons.tsx` (Home, Send, Loan, Analytics, Savings).
 
 ### Auth Flow
 1. `app/auth/index.tsx` — phone entry (Uganda +256), Relworx `validatePhone`
@@ -29,21 +30,22 @@ Expo (React Native) wallet app at `artifacts/mobile/`. Uganda-focused, Relworx-p
 
 ### Key Files
 - `lib/firebase.ts` — Firestore export
-- `lib/firestore.ts` — All Firestore CRUD (balance, transactions, savings, loans, notifications)
-- `lib/authContext.tsx` — `AuthProvider` with `balanceUGX`, `deductBalance`, `creditBalance`, `refreshBalance`
+- `lib/firestore.ts` — All Firestore CRUD. Includes: `depositToSavings`, `withdrawFromSavings`, `deleteSavingsPot`, `disburseLoan`
+- `lib/authContext.tsx` — `AuthProvider` with `balanceUGX`, `deductBalance`, `creditBalance`, `refreshBalance`, `changePin`, `updateCustomerName`
 - `lib/notificationService.ts` — Expo push notification registration
 - `lib/relworx.ts` — All Relworx API calls (products, validate, purchase, poll status, withdraw)
 - `lib/api.ts` — `apiFetch` wrapper pointing to Railway backend
 - `lib/userSession.ts` — phone → customer_reference prefix
-- `app/bank.tsx` — Bank transfer; real Firestore deduction, real bank list from Relworx
-- `app/buy.tsx` — Airtime/data purchase; wallet balance deduction
-- `app/pay.tsx` — Utility payments; wallet balance deduction
-- `app/settings.tsx` — Profile & settings screen
+- `components/TabIcons.tsx` — Custom SVG tab icons (HomeIcon, SendIcon, LoanIcon, AnalyticsIcon, SavingsIcon)
+- `app/(tabs)/bank.tsx` — Bank transfer (moved from app/bank.tsx)
+- `app/(tabs)/buy.tsx` — Airtime/data purchase (moved from app/buy.tsx)
+- `app/(tabs)/pay.tsx` — Utility payments (moved from app/pay.tsx)
+- `app/settings.tsx` — Profile & settings; edit name modal + change PIN modal (fully functional)
 - `app/notifications.tsx` — Firestore notifications with mark-read
 - `app/(tabs)/index.tsx` — Home; real Firestore balance & transactions, avatar→settings, bell→notifications
-- `app/(tabs)/analytics.tsx` — Real Firestore transactions, monthly chart
-- `app/(tabs)/savings.tsx` — Real Firestore savings pots
-- `app/(tabs)/wallet.tsx` — Loans screen; Firestore loans, no phone re-verification
+- `app/(tabs)/analytics.tsx` — Real Firestore transactions; time period filters (7D/1M/3M/6M/1Y), interactive bar chart
+- `app/(tabs)/savings.tsx` — Full savings: create pot, deposit modal, withdraw modal, close pot (delete), progress tracking
+- `app/(tabs)/wallet.tsx` — Loans: apply → documents → disburse to wallet balance automatically
 - `app/(tabs)/send.tsx` — Send money; wallet balance check & Firestore deduction
 
 ## Stack

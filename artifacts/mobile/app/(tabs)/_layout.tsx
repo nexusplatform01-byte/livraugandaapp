@@ -1,12 +1,12 @@
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
-import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Dimensions, Platform, StyleSheet, View, useColorScheme } from "react-native";
+import { Dimensions, Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Path, Svg } from "react-native-svg";
+import { HomeIcon, SendIcon, LoanIcon, AnalyticsIcon, SavingsIcon } from "@/components/TabIcons";
 
 const TAB_BG   = "#1A3B2F";
 const ACTIVE   = "#C6F135";
@@ -30,14 +30,6 @@ function NotchedBackground({ height }: { height: number }) {
     <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
       <Path d={d} fill={TAB_BG} />
     </Svg>
-  );
-}
-
-function BankTabIcon({ color }: { color: string }) {
-  return (
-    <View style={{ alignItems: "center", justifyContent: "center" }}>
-      <Feather name="credit-card" size={22} color={color} />
-    </View>
   );
 }
 
@@ -103,24 +95,14 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="house" tintColor={color} size={22} />
-            ) : (
-              <Feather name="home" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color }) => <HomeIcon color={color} size={23} />,
         }}
       />
       <Tabs.Screen
         name="wallet"
         options={{
           title: "Loan",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="banknote" tintColor={color} size={22} />
-            ) : (
-              <BankTabIcon color={color} />
-            ),
+          tabBarIcon: ({ color }) => <LoanIcon color={color} size={23} />,
         }}
       />
       <Tabs.Screen
@@ -130,7 +112,7 @@ function ClassicTabLayout() {
           tabBarIcon: () => (
             <View style={sendOuterStyle}>
               <View style={sendBtnStyle}>
-                <Feather name="navigation" size={22} color={TAB_BG} />
+                <SendIcon color={TAB_BG} size={22} />
               </View>
             </View>
           ),
@@ -140,24 +122,14 @@ function ClassicTabLayout() {
         name="analytics"
         options={{
           title: "Analytics",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="chart.bar" tintColor={color} size={22} />
-            ) : (
-              <Feather name="bar-chart-2" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color }) => <AnalyticsIcon color={color} size={22} />,
         }}
       />
       <Tabs.Screen
         name="savings"
         options={{
           title: "Savings",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="banknote" tintColor={color} size={22} />
-            ) : (
-              <Feather name="layers" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color }) => <SavingsIcon color={color} size={23} />,
         }}
       />
       <Tabs.Screen

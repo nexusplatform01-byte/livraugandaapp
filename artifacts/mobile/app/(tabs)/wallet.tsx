@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { useAuth } from "@/lib/authContext";
-import { createLoan, getLoans, addNotification, type FsLoan } from "@/lib/firestore";
+import { createLoan, disburseLoan, getLoans, addNotification, type FsLoan } from "@/lib/firestore";
 
 // ─── Dark green theme ──────────────────────────────────────────────────────────
 const DG     = "#0D1F17";
@@ -429,7 +429,7 @@ function LoanDashboard({ verifiedName, loanType, topPad, loans = [], onApplyNew 
 export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const { phone: authPhone, customerName } = useAuth();
+  const { phone: authPhone, customerName, refreshBalance } = useAuth();
 
   const [screen,    setScreen]    = useState<Screen>("loanType");
   const [loanType,  setLoanType]  = useState<LoanType>(null);
@@ -452,23 +452,30 @@ export default function WalletScreen() {
     if (!loanType || submitting) return;
     setSubmitting(true);
     try {
-      const loanLimit = loanType === "individual" ? 500000 : loanType === "business" ? 5000000 : 2000000;
-      await createLoan(authPhone, {
+      const loanLimit   = loanType === "individual" ? 500000 : loanType === "business" ? 5000000 : 2000000;
+      const interest    = loanType === "work_allowance" ? 3 : 5;
+      const dueDate     = new Date(Date.now() + 30 * 86400000).toLocaleDateString("en-UG", { month: "short", day: "numeric", year: "numeric" });
+      const loanId = await createLoan(authPhone, {
         type: loanType,
         amount: loanLimit,
         outstanding: loanLimit,
         nextPayment: Math.round(loanLimit / 12),
-        interestRate: loanType === "work_allowance" ? 3 : 5,
-        dueDate: new Date(Date.now() + 30 * 86400000).toLocaleDateString("en-UG", { month: "short", day: "numeric", year: "numeric" }),
-        status: "active",
+        interestRate: interest,
+        dueDate,
+        status: "pending",
       });
+      await disburseLoan(authPhone, loanId, loanLimit);
+      await refreshBalance();
       await addNotification(authPhone, {
-        title: "Loan Application Submitted",
-        body: `Your ${loanType.replace("_", " ")} loan application is under review. We'll notify you shortly.`,
+        title: "Loan Approved & Disbursed!",
+        body: `${fmt(loanLimit)} has been credited to your wallet. Repay by ${dueDate}.`,
         type: "loan",
         read: false,
       });
-      Alert.alert("Application Submitted!", "Your loan application has been received. We'll review and notify you within 24 hours.");
+      Alert.alert(
+        "Loan Approved!",
+        `${fmt(loanLimit)} has been credited to your wallet.\n\nRepay by ${dueDate} at ${interest}% interest.`
+      );
       await loadLoans();
     } catch (e: any) {
       Alert.alert("Error", e.message || "Could not submit loan application.");

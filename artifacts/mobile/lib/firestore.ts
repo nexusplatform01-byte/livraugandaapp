@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -180,6 +181,67 @@ export async function depositToSavings(
     category: "Savings",
     icon: "layers",
     color: "#54A0FF",
+    status: "success",
+  });
+}
+
+export async function withdrawFromSavings(
+  phone: string,
+  potId: string,
+  amount: number,
+  potBalance: number
+): Promise<void> {
+  if (potBalance < amount) throw new Error("Insufficient savings balance");
+  const potRef = doc(db, "users", phone, "savings", potId);
+  await updateDoc(potRef, { balance: increment(-amount) });
+  await updateUserBalance(phone, amount);
+  await addTransaction(phone, {
+    type: "savings_withdrawal",
+    amount: amount,
+    description: "Savings withdrawal",
+    category: "Savings",
+    icon: "layers",
+    color: "#54A0FF",
+    status: "success",
+  });
+}
+
+export async function deleteSavingsPot(
+  phone: string,
+  potId: string,
+  potBalance: number
+): Promise<void> {
+  if (potBalance > 0) {
+    await updateUserBalance(phone, potBalance);
+    await addTransaction(phone, {
+      type: "savings_withdrawal",
+      amount: potBalance,
+      description: "Savings pot closed",
+      category: "Savings",
+      icon: "layers",
+      color: "#54A0FF",
+      status: "success",
+    });
+  }
+  const potRef = doc(db, "users", phone, "savings", potId);
+  await deleteDoc(potRef);
+}
+
+export async function disburseLoan(
+  phone: string,
+  loanId: string,
+  amount: number
+): Promise<void> {
+  await updateUserBalance(phone, amount);
+  const loanRef = doc(db, "users", phone, "loans", loanId);
+  await updateDoc(loanRef, { status: "active" });
+  await addTransaction(phone, {
+    type: "loan_disbursement",
+    amount: amount,
+    description: "Loan disbursed to wallet",
+    category: "Loan",
+    icon: "credit-card",
+    color: "#C6F135",
     status: "success",
   });
 }
